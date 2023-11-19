@@ -32,7 +32,8 @@ def generate_all_txt(root, txt_dir, num_samples=None):
         start = start[:4] + '-' + start[4:6] + '-' + start[6:]
         s = tuple(time.strptime(start, "%Y-%m-%d"))
         d2 = datetime.date(s[0], s[1], s[2])
-        times=(d1 - d2).days*24+int(file_name[:2])+round(int(file_name[2:4])/60,3)
+        # times=(d1 - d2).days*24+int(file_name[:2])+round(int(file_name[2:4])/60,3)
+        times = (d1 - d2).days * 24 + int(file_name[:2])
         # print(times)
         f.write(f"{var},{times}\n")
 
@@ -52,7 +53,8 @@ def generate_all_txt2(root, txt_dir, num_samples=None):
         start = start[:4] + '-' + start[4:6] + '-' + start[6:]
         s = tuple(time.strptime(start, "%Y-%m-%d"))
         d2 = datetime.date(s[0], s[1], s[2])
-        times=(d1 - d2).days*24+int(file_name[:2])+round(int(file_name[2:4])/60,3)
+        # times=(d1 - d2).days*24+int(file_name[:2])+round(int(file_name[2:4])/60,3)
+        times = (d1 - d2).days * 24 + int(file_name[:2])
         # print(times)
         f.write(f"{var},{times}\n")
 
@@ -114,8 +116,8 @@ class BatchDataset(Dataset):
         filename, times= self.lines[idx].strip().split(",")
         # image = Image.open(filename).convert('RGB')
         # image = self.transform(image)
-        # times = np.float32(int(times)/100.0)
-        times = np.float32(float(times)/100.0)
+        times = np.float32(int(times)/100.0)
+        # times = np.float32(float(times)/100.0)
 
         img = cv2.imread(filename, 1)
         # size = (50, 50)
@@ -126,7 +128,7 @@ class BatchDataset(Dataset):
         w = 1000
         h = 1500
         img = img[x:x + w, y:y + h]
-        # gray = cv2.equalizeHist(gray)
+        # img = cv2.equalizeHist(img)
         # clahe = cv2.createCLAHE(clipLimit=4, tileGridSize=(10, 5))
         # gray = clahe.apply(gray)
         # size = (224, 224)
@@ -159,9 +161,9 @@ class BatchDataset(Dataset):
         return len(self.lines)
 
 if __name__ == "__main__":
-    pass
-    # generate_all_txt(root="/home/llj/code/test/data", txt_dir="/home/llj/code/test/")
-    # split_train_test("/home/llj/code/test/")
+    # pass
+    generate_all_txt(root="/home/llj/code/test/data", txt_dir="/home/llj/code/test/")
+    split_train_test("/home/llj/code/test/")
 
     # generate_all_txt2(root="/home/llj/code/test/data2", txt_dir="/home/llj/code/test/")
     # split_train_test2("/home/llj/code/test/")

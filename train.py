@@ -17,7 +17,8 @@ import torchvision.transforms as transforms
 import numpy as np
 
 from main import BatchDataset
-from models import Model
+# from models import Model
+from models import RestNet18
 import utils
 # os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
@@ -29,8 +30,9 @@ import utils
 def main(args):
     # 初始化模型
     # model = Model(pretrained=True)
-    model = Model(3,1,True)
+    # model = Model(3,1,True)
     # model = Model()
+    model = RestNet18()
 
     # model = nn.Sequential(nn.Flatten(), nn.Linear(256, 1))
     # model = nn.Sequential(nn.Flatten(), nn.Linear(150528, 1))
@@ -121,14 +123,13 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
     meter = utils.AverageMeter()
     total = len(train_loader)
     for i, (inputs, times, filenames) in enumerate(train_loader):
+        inputs = torch.reshape(inputs, (-1, 3, 16, 16))
         inputs = inputs.to(device)
         # print(inputs)
-        # print(times)
         # print(inputs.shape)
         times = times.to(device)
         # print(times.shape)
         # print(times)
-        # print(inputs.shape)#[8, 256, 1]
 
         time_pd = model(inputs)#预测
         # time_pd = abs(time_pd)
@@ -166,6 +167,7 @@ def validate(val_loader, model, criterion, epoch, args):
     with torch.no_grad():
         total = len(val_loader)
         for i, (inputs, times, filenames) in enumerate(val_loader):
+            inputs = torch.reshape(inputs, (-1, 3, 16, 16))
             inputs = inputs.to(device)
             # print(inputs.shape)
 
