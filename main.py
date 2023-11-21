@@ -34,6 +34,8 @@ def generate_all_txt(root, txt_dir, num_samples=None):
         d2 = datetime.date(s[0], s[1], s[2])
         # times=(d1 - d2).days*24+int(file_name[:2])+round(int(file_name[2:4])/60,3)
         times = (d1 - d2).days * 24 + int(file_name[:2])
+
+        times = int(times / 6)
         # print(times)
         f.write(f"{var},{times}\n")
 
@@ -55,6 +57,8 @@ def generate_all_txt2(root, txt_dir, num_samples=None):
         d2 = datetime.date(s[0], s[1], s[2])
         # times=(d1 - d2).days*24+int(file_name[:2])+round(int(file_name[2:4])/60,3)
         times = (d1 - d2).days * 24 + int(file_name[:2])
+
+        times = int(times / 6)
         # print(times)
         f.write(f"{var},{times}\n")
 
@@ -76,6 +80,35 @@ def split_train_test(txt_dir, ratio=0.6, seed=123):
             f.write(line)
     with open(os.path.join(txt_dir, "val.txt"), "w", encoding="utf-8") as f:
         for line in val_lines:
+            f.write(line)
+
+import os
+import random
+def split_data(txt_dir, train_ratio=0.6, val_ratio=0.2, seed=123):
+    """将数据集按照比例分为训练集、验证集和测试集三个"""
+    with open(os.path.join(txt_dir, "all.txt"), "r", encoding="utf-8") as f:
+        lines = f.readlines()
+    total = len(lines)
+
+    random.seed(seed)
+    random.shuffle(lines)
+
+    train_size = int(total * train_ratio)
+    val_size = int(total * val_ratio)
+    test_size = total - train_size - val_size
+
+    train_lines = lines[:train_size]
+    val_lines = lines[train_size:train_size + val_size]
+    test_lines = lines[-test_size:]
+
+    with open(os.path.join(txt_dir, "train.txt"), "w", encoding="utf-8") as f:
+        for line in train_lines:
+            f.write(line)
+    with open(os.path.join(txt_dir, "val.txt"), "w", encoding="utf-8") as f:
+        for line in val_lines:
+            f.write(line)
+    with open(os.path.join(txt_dir, "test.txt"), "w", encoding="utf-8") as f:
+        for line in test_lines:
             f.write(line)
 
 def split_train_test2(txt_dir, ratio=0.6, seed=123):
@@ -132,8 +165,8 @@ class BatchDataset(Dataset):
         # clahe = cv2.createCLAHE(clipLimit=4, tileGridSize=(10, 5))
         # gray = clahe.apply(gray)
         # size = (224, 224)
-        size = (50, 50)
-        img = cv2.resize(img, size)
+        # size = (50, 50)
+        # img = cv2.resize(img, size)
         hist_0 = cv2.calcHist([img], [0], None, [256], [0, 256])
         hist_1 = cv2.calcHist([img], [1], None, [256], [0, 256])
         hist_2 = cv2.calcHist([img], [2], None, [256], [0, 256])
@@ -162,11 +195,13 @@ class BatchDataset(Dataset):
 
 if __name__ == "__main__":
     # pass
-    generate_all_txt(root="/home/llj/code/test/data", txt_dir="/home/llj/code/test/")
-    split_train_test("/home/llj/code/test/")
-
+    # generate_all_txt(root="/home/llj/code/test/data", txt_dir="/home/llj/code/test/")
+    # split_train_test("/home/llj/code/test/")
+    #
     # generate_all_txt2(root="/home/llj/code/test/data2", txt_dir="/home/llj/code/test/")
     # split_train_test2("/home/llj/code/test/")
+
+    split_data("/home/llj/code/test/")
 
     # transform1 = transforms.Compose([
     #     transforms.ToTensor(),

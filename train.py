@@ -17,7 +17,7 @@ import torchvision.transforms as transforms
 import numpy as np
 
 from main import BatchDataset
-# from models import Model
+from models import Model
 from models import RestNet18
 import utils
 # os.environ['CUDA_VISIBLE_DEVICES'] = '1'
@@ -143,7 +143,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         # acc = utils.accuracy(time_pd, times)
         # acc = np.sum(((time_pd*100).numpy().astype(int))==((times*100).numpy().astype(int)))
         # acc=0
-        acc = torch.eq(time_pd*100, times*100).float().cpu().mean()
+        acc = torch.eq(torch.ceil(time_pd * 100), torch.ceil(times * 100)).float().cpu().mean()
         # print(acc.shape)
         meter.add({"loss": loss.item(), "acc": acc})
         #如果当前batch的索引(i)被参数args.log_step整除，则打印训练进度(logging.info)，包括当前训练的epoch数、总epoch数、当前batch的索引、总batch数、学习率(optimizer.param_groups[0][‘lr’])以及损失和准确率的信息
@@ -184,7 +184,7 @@ def validate(val_loader, model, criterion, epoch, args):
             # acc = torch.eq(time_pd, times).float().mean()
             # acc=0
             # acc = np.sum((time_pd * 100).numpy().astype(int) == (times * 100).numpy().astype(int))
-            acc = torch.eq(time_pd * 100, times * 100).float().cpu().mean()
+            acc = torch.eq(torch.ceil(time_pd * 100), torch.ceil(times * 100)).float().cpu().mean()
             meter.add({"loss": loss.item(), "acc": acc})
 
 
