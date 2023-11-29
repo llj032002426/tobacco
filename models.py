@@ -1,5 +1,6 @@
 # import torch
 # import torch.utils.data
+import torch
 from torch import nn
 from torch.nn import functional as F
 from d2l import torch as d2l
@@ -239,7 +240,13 @@ class RestNet18(nn.Module):
 
         self.avgpool = nn.AdaptiveAvgPool2d(output_size=(1, 1))
 
+        # self.fc = nn.Linear(512, 1)
         self.fc = nn.Linear(512, 1)
+
+    def softmax(X):
+        X_exp = torch.exp(X)
+        partition = X_exp.sum(1, keepdim=True)
+        return X_exp / partition  # 这里应用了广播机制
 
     def forward(self, x):
         out = self.conv1(x)
@@ -253,7 +260,70 @@ class RestNet18(nn.Module):
         out = out.flatten(0)  # [16]
         return out
 
+#Resnet50
+class Bottleneck(nn.Module):
+    def __init__(self, inchannel, outchannel, stride=1):
+        super(Bottleneck, self).__init__()
+        self.left = nn.Sequential(
+            nn.Conv2d(inchannel, int(outchannel / 4), kernel_size=1, stride=stride, padding=0, bias=False),
+            nn.BatchNorm2d(int(outchannel / 4)),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(int(outchannel / 4), int(outchannel / 4), kernel_size=3, stride=1, padding=1, bias=False),
+            nn.BatchNorm2d(int(outchannel / 4)),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(int(outchannel / 4), outchannel, kernel_size=1, stride=1, padding=0, bias=False),
+            nn.BatchNorm2d(outchannel),
+        )
+        self.shortcut = nn.Sequential()
+        if stride != 1 or inchannel != outchannel:
+            self.shortcut = nn.Sequential(
+                nn.Conv2d(inchannel, outchannel, kernel_size=1, stride=stride, bias=False),
+                nn.BatchNorm2d(outchannel)
+            )
 
+    def forward(self, x):
+        out = self.left(x)
+        y = self.shortcut(x)
+        out += self.shortcut(x)
+        out = F.relu(out)
+        return out
+
+class ResNet_50(nn.Module):
+    def __init__(self):
+        super(ResNet_50, self).__init__()
+        self.inchannel = 64
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+        )
+        self.layer1 = self.make_layer(Bottleneck, 256, 3, stride=1)
+        self.layer2 = self.make_layer(Bottleneck, 512, 4, stride=2)
+        self.layer3 = self.make_layer(Bottleneck, 1024, 6, stride=2)
+        self.layer4 = self.make_layer(Bottleneck, 2048, 3, stride=2)
+        self.fc = nn.Linear(512 * 2, 1)
+        # **************************
+
+    def make_layer(self, block, channels, num_blocks, stride):
+        strides = [stride] + [1] * (num_blocks - 1)  # strides=[1,1]
+        layers = []
+        for stride in strides:
+            layers.append(block(self.inchannel, channels, stride))
+            self.inchannel = channels
+        return nn.Sequential(*layers)
+
+    def forward(self, x):  # 3*32*32
+        out = self.conv1(x)  # 64*32*32
+        out = self.layer1(out)  # 64*32*32
+        out = self.layer2(out)  # 128*16*16
+        out = self.layer3(out)  # 256*8*8
+        # out = self.layer4(out)  # 512*4*4
+        out = F.avg_pool2d(out, 4)  # 512*1*1
+        # print(out.size())
+        out = out.view(out.size(0), -1)  # 512
+        out = self.fc(out)
+        out = out.flatten(0)
+        return out
 
 # class Model(nn.Module):
 #     """A model to predict time"""

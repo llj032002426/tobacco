@@ -1,5 +1,5 @@
 import glob
-
+import numpy
 import torch
 from sklearn.preprocessing import MinMaxScaler
 import cv2
@@ -35,7 +35,7 @@ def generate_all_txt(root, txt_dir, num_samples=None):
         # times=(d1 - d2).days*24+int(file_name[:2])+round(int(file_name[2:4])/60,3)
         times = (d1 - d2).days * 24 + int(file_name[:2])
 
-        times = int(times / 6)
+        # times = int(times / 6)
         # print(times)
         f.write(f"{var},{times}\n")
 
@@ -58,7 +58,7 @@ def generate_all_txt2(root, txt_dir, num_samples=None):
         # times=(d1 - d2).days*24+int(file_name[:2])+round(int(file_name[2:4])/60,3)
         times = (d1 - d2).days * 24 + int(file_name[:2])
 
-        times = int(times / 6)
+        # times = int(times / 6)
         # print(times)
         f.write(f"{var},{times}\n")
 
@@ -111,6 +111,34 @@ def split_data(txt_dir, train_ratio=0.6, val_ratio=0.2, seed=123):
         for line in test_lines:
             f.write(line)
 
+def split_data2(txt_dir, train_ratio=0.6, val_ratio=0.2, seed=123):
+    """将数据集按照比例分为训练集、验证集和测试集三个"""
+    with open(os.path.join(txt_dir, "all2.txt"), "r", encoding="utf-8") as f:
+        lines = f.readlines()
+    total = len(lines)
+
+    random.seed(seed)
+    random.shuffle(lines)
+
+    train_size = int(total * train_ratio)
+    val_size = int(total * val_ratio)
+    test_size = total - train_size - val_size
+
+    train_lines = lines[:train_size]
+    val_lines = lines[train_size:train_size + val_size]
+    test_lines = lines[-test_size:]
+
+    with open(os.path.join(txt_dir, "train2.txt"), "w", encoding="utf-8") as f:
+        for line in train_lines:
+            f.write(line)
+    with open(os.path.join(txt_dir, "val2.txt"), "w", encoding="utf-8") as f:
+        for line in val_lines:
+            f.write(line)
+    with open(os.path.join(txt_dir, "test2.txt"), "w", encoding="utf-8") as f:
+        for line in test_lines:
+            f.write(line)
+
+
 def split_train_test2(txt_dir, ratio=0.6, seed=123):
     '''拆分训练集和测试集
     '''
@@ -140,8 +168,8 @@ def hist_ave_2(src):
 class BatchDataset(Dataset):
 
     def __init__(self, root, txt_dir, name, transform):
-        self.root = root
-        # self.transform = transform
+        # self.root = root
+        self.transform = transform
         with open(os.path.join(txt_dir, f"{name}.txt"), "r", encoding="utf-8") as f:
             self.lines = f.readlines()
 
@@ -149,7 +177,10 @@ class BatchDataset(Dataset):
         filename, times= self.lines[idx].strip().split(",")
         # image = Image.open(filename).convert('RGB')
         # image = self.transform(image)
-        times = np.float32(int(times)/100.0)
+        # img = cv2.cvtColor(numpy.asarray(image), cv2.COLOR_RGB2BGR)
+
+        # times = np.float32(int(times)/100.0)
+        times = np.float32(int(times)/ 100.0)
         # times = np.float32(float(times)/100.0)
 
         img = cv2.imread(filename, 1)
@@ -194,14 +225,21 @@ class BatchDataset(Dataset):
         return len(self.lines)
 
 if __name__ == "__main__":
-    # pass
+    pass
     # generate_all_txt(root="/home/llj/code/test/data", txt_dir="/home/llj/code/test/")
     # split_train_test("/home/llj/code/test/")
     #
     # generate_all_txt2(root="/home/llj/code/test/data2", txt_dir="/home/llj/code/test/")
     # split_train_test2("/home/llj/code/test/")
 
-    split_data("/home/llj/code/test/")
+    # split_data("/home/llj/code/test/")
+    # split_data2("/home/llj/code/test/")
+
+    # with open(os.path.join("/home/llj/code/test/", "all2.0txt"), "r", encoding="utf-8") as f:
+    #     data = f.readlines()
+    # random.shuffle(data)
+    # with open(os.path.join("/home/llj/code/test/", "test2.txt"), "w", encoding="utf-8") as f:
+    #     lines = f.writelines(data)
 
     # transform1 = transforms.Compose([
     #     transforms.ToTensor(),

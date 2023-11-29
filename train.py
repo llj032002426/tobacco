@@ -19,6 +19,7 @@ import numpy as np
 from main import BatchDataset
 from models import Model
 from models import RestNet18
+from models import ResNet_50
 import utils
 # os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
@@ -32,7 +33,8 @@ def main(args):
     # model = Model(pretrained=True)
     # model = Model(3,1,True)
     # model = Model()
-    model = RestNet18()
+    # model = RestNet18()
+    model = ResNet_50()
 
     # model = nn.Sequential(nn.Flatten(), nn.Linear(256, 1))
     # model = nn.Sequential(nn.Flatten(), nn.Linear(150528, 1))
@@ -63,12 +65,14 @@ def main(args):
 
     # 定义数据预处理的操作，包括将图像转换为张量、调整图像大小、应用透视变换和随机旋转等
     transform1 = transforms.Compose([
+        transforms.ColorJitter(contrast=0.8)
         # transforms.ToTensor(),
         # transforms.Resize([args.img_size, args.img_size], antialias=True),
         # transforms.RandomPerspective(distortion_scale=0.6, p=1.0),
         # transforms.RandomRotation(degrees=(0, 180)),
     ])
     transform2 = transforms.Compose([
+        transforms.ColorJitter(contrast=0.8)
         # transforms.ToTensor(),
         # transforms.Resize([args.img_size, args.img_size], antialias=True),
     ])
@@ -115,8 +119,22 @@ def main(args):
     utils.plot_history(meter.pop("loss"), meter.pop("acc"), meter.pop("val_loss"), meter.pop("val_acc"),
                        history_save_path)
     logging.info('STOP TIME:{}'.format(time.asctime(time.localtime(time.time()))))
-# def cross_entropy(y_hat,y):
-#     return -torch.log(y_hat[range(len(y_hat)),y])
+
+def softmax(X):
+    X_exp = torch.exp(X)
+    partition = X_exp.sum(1, keepdim=True)
+    return X_exp / partition  # 这里应用了广播机制
+def cross_entropy(y_hat, y):
+    return - torch.log(y_hat[range(len(y_hat)), y])
+def acc1(y_hat, y):  #@save
+    """计算预测正确的数量"""
+    if len(y_hat.shape) > 1 and y_hat.shape[1] > 1:#如果y_hat是一个二或以上维张量并且列数大于1（y_hat如果是一个二维张量，y_hat.shape输出的就是一个一维张量，张量中有两个元素 i，j，分别表示行和列数）
+        y_hat = y_hat.argmax(axis=1)#找出y_hat中每行最大的数的索引号
+    cmp = y_hat.type(y.dtype) == y#将y_hat和y进行比对，返回一个bool类型给cmp
+    # print(y)
+    # print(y_hat.type(y.dtype))
+    return float(cmp.type(y.dtype).sum())#最后将cmp求和就是y_hat和y中相同元素个数
+
 #一个数据加载器(train_loader 或 val_loader)，一个模型(model)，一个损失函数(criterion)，一个优化器(optimizer)，一个epoch数(epoch)，以及其他一些参数
 def train(train_loader, model, criterion, optimizer, epoch, args):
     model.train()#将模型设为训练模式
@@ -135,17 +153,28 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         # time_pd = abs(time_pd)
         # print(time_pd.shape)
         # time_pd = softmax(time_pd)
+        # print(times)
         # print(time_pd)
         # print(time_pd.shape)
 
         loss = criterion(time_pd, times)
+        # print(loss)
         # loss = cross_entropy(time_pd, times)
         # acc = utils.accuracy(time_pd, times)
-        # acc = np.sum(((time_pd*100).numpy().astype(int))==((times*100).numpy().astype(int)))
-        # acc=0
-        acc = torch.eq(torch.ceil(time_pd * 100), torch.ceil(times * 100)).float().cpu().mean()
+        # acc = torch.eq(torch.ceil(time_pd * 100), torch.ceil(times * 100)).float().cpu().mean()
+        # acc = torch.eq(torch.ceil(time_pd), torch.ceil(times)).float().cpu().mean()
+        # acc = torch.eq(torch.round(time_pd * 100), torch.round(times * 100)).float().cpu().mean()
+        # print(acc)
+        # print(torch.sub(torch.round(time_pd * 100), torch.round(times * 100)))
+        acc = torch.le(abs(torch.sub(torch.round(time_pd * 100), torch.round(times * 100))), 3).float().cpu().mean()
+        # acc = torch.eq(torch.round(time_pd), torch.round(times)).float().cpu().mean()
+        # print(torch.ceil(time_pd))
+        # print(torch.ceil(times))
+        # print(acc)
         # print(acc.shape)
-        meter.add({"loss": loss.item(), "acc": acc})
+        # acc = acc1(time_pd, times)
+        # acc=0
+        meter.add({"loss": float(loss.item()), "acc": acc})
         #如果当前batch的索引(i)被参数args.log_step整除，则打印训练进度(logging.info)，包括当前训练的epoch数、总epoch数、当前batch的索引、总batch数、学习率(optimizer.param_groups[0][‘lr’])以及损失和准确率的信息
         if i % args.log_step == 0:
             logging.info(
@@ -155,6 +184,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
             )
         #接着，将优化器梯度置零(optimizer.zero_grad())，计算总损失(loss)对模型参数的梯度(loss.backward())，并执行一步优化(optimizer.step())更新模型参数
         optimizer.zero_grad()
+        # loss.backward()
         loss.backward()
         optimizer.step()
 
@@ -175,6 +205,7 @@ def validate(val_loader, model, criterion, epoch, args):
 
 
             time_pd = model(inputs)
+            # time_pd = softmax(time_pd)
             # print(time_pd)
             # print(time_pd.shape)
             # time_pd = abs(time_pd)
@@ -183,8 +214,11 @@ def validate(val_loader, model, criterion, epoch, args):
             # acc = utils.accuracy(time_pd, times)
             # acc = torch.eq(time_pd, times).float().mean()
             # acc=0
-            # acc = np.sum((time_pd * 100).numpy().astype(int) == (times * 100).numpy().astype(int))
-            acc = torch.eq(torch.ceil(time_pd * 100), torch.ceil(times * 100)).float().cpu().mean()
+            # acc = torch.eq(torch.ceil(time_pd), torch.ceil(times)).float().cpu().mean()
+            # acc = torch.eq(torch.round(time_pd*100), torch.round(times*100)).float().cpu().mean()
+            acc = torch.le(abs(torch.sub(torch.round(time_pd * 100), torch.round(times * 100))), 3).float().cpu().mean()
+            # acc = torch.eq(torch.round(time_pd), torch.round(times)).float().cpu().mean()
+            # acc = acc1(time_pd, times)
             meter.add({"loss": loss.item(), "acc": acc})
 
 
@@ -202,12 +236,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="")#创建一个ArgumentParser对象，用于解析命令行参数
     parser.add_argument("--root", type=str, default="/home/llj/code/test/data")#添加一个命令行参数--root，类型为字符串，必需参数
     parser.add_argument("--txt_dir", type=str, default="/home/llj/code/test/")
-    parser.add_argument("--epochs", type=int, default=50)
+    parser.add_argument("--epochs", type=int, default=120)
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--num_workers", type=int, default=4)
     parser.add_argument("--log_step", type=int, default=100)
     parser.add_argument("--img_size", type=int, default=224)
-    parser.add_argument("--lr", type=float, default=0.01)
+    parser.add_argument("--lr", type=float, default=0.001)
     parser.add_argument("--warmup_steps", type=int, default=10)
     parser.add_argument("--pretrain_weight_path", type=str, default="", help="pretrain weight path")
     parser.add_argument("--experiment_name", type=str, default="llj",help="experiment name")
@@ -232,7 +266,7 @@ if __name__ == '__main__':
         handlers=[logging.FileHandler(log_path, mode='a'), logging.StreamHandler()]
     )
     try:
-        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cuda:2' if torch.cuda.is_available() else 'cpu')
         utils.fix_seed()#调用名为fix_seed()的函数，用于设置随机种子，保证实验的可复现性
         main(args)
     except Exception as e:
