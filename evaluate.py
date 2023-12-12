@@ -50,7 +50,7 @@ def eval():
         total = len(loader)
         for i, (inputs, times, filenames) in enumerate(loader):
             print("{:<5}/{:<5}".format(i, total), end="\r")
-            inputs = torch.reshape(inputs, (-1, 3, 16, 16))
+            # inputs = torch.reshape(inputs, (-1, 3, 16, 16))
             inputs = inputs.to(device)
             # print(inputs)
             times = times.to(device)
@@ -97,12 +97,12 @@ def metrics():
             # loss += (int(time_gt)/100.0 - int(time_pd)/100.0)**2
             loss += (int(time_gt) - int(time_pd)) ** 2
             # loss += (float(time_gt) / 100.0 - float(time_pd) / 100.0) ** 2
-            # if abs(int(time_gt) - int(time_pd)) <6:
+            if abs(int(time_gt) - int(time_pd)) <6:
             # if abs(float(time_gt) - float(time_pd))<5:
             # time_gt = int(time_gt)
             # time_pd = int(time_pd)
             # if Acc(time_gt,time_pd):
-            if int(time_gt) == int(time_pd):
+            # if int(time_gt) == int(time_pd):
                 count +=1
     print("loss:{}, acc:{:.6f}".format(loss/total, count/total))  # 此处离线评估的loss会比训练期间的验证集更小 因为保存csv时用round做了四舍五入取整
     # print("loss:{}".format(loss / total))
@@ -116,7 +116,7 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--num_workers", type=int, default=4)
     parser.add_argument("--img_size", type=int, default=224)
-    parser.add_argument("--weights", type=str, default="./middle/models/llj-20231129-155707-best.pth", help="pretrain weight path")
+    parser.add_argument("--weights", type=str, default="./middle/models/llj-20231211-163647-best.pth", help="pretrain weight path")
     parser.add_argument("--experiment_name", type=str, default="llj",help="experiment name")
     # parser.add_argument("--mode", type=str, required=True, choices=["eval", "metrics"])
     parser.add_argument("--mode", type=str, default="eval")

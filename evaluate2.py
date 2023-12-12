@@ -49,7 +49,7 @@ def eval():
         total = len(loader)
         for i, (inputs, times, filenames) in enumerate(loader):
             print("{:<5}/{:<5}".format(i, total), end="\r")
-            inputs = torch.reshape(inputs, (-1, 3, 16, 16))
+            # inputs = torch.reshape(inputs, (-1, 3, 16, 16))
             inputs = inputs.to(device)
             # print(inputs)
             times = times.to(device)
@@ -106,7 +106,7 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--num_workers", type=int, default=4)
     parser.add_argument("--img_size", type=int, default=224)
-    parser.add_argument("--weights", type=str, default="./middle/models/llj-20231129-155707-best.pth", help="pretrain weight path")
+    parser.add_argument("--weights", type=str, default="./middle/models/llj-20231211-163647-best.pth", help="pretrain weight path")
     parser.add_argument("--experiment_name", type=str, default="llj",help="experiment name")
     # parser.add_argument("--mode", type=str, required=True, choices=["eval", "metrics"])
     parser.add_argument("--mode", type=str, default="eval")

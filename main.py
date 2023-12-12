@@ -9,6 +9,8 @@ import numpy as np
 import scipy.io as sio
 from PIL import Image
 from torch.utils.data import Dataset
+from group_feature import Group_2G_R_B,Group_GRGB,Group_RG,Group_GR,Group_lab
+from textural_feature import fast_glcm_std,fast_glcm_contrast,fast_glcm_dissimilarity,fast_glcm_homogeneity,fast_glcm_ASM,fast_glcm_ENE,fast_glcm_max,fast_glcm_entropy
 from PIL import  Image
 import os
 import numpy as np
@@ -177,47 +179,70 @@ class BatchDataset(Dataset):
         filename, times= self.lines[idx].strip().split(",")
         # image = Image.open(filename).convert('RGB')
         # image = self.transform(image)
-        # img = cv2.cvtColor(numpy.asarray(image), cv2.COLOR_RGB2BGR)
+        img = cv2.imread(filename, 1)
 
         # times = np.float32(int(times)/100.0)
         times = np.float32(int(times)/ 100.0)
         # times = np.float32(float(times)/100.0)
+        # return (image, times, filename)
 
-        img = cv2.imread(filename, 1)
-        # size = (50, 50)
-        # img = cv2.resize(img, size)
-        # gray = cv2.cvtColor(gray, cv2.COLOR_BGR2GRAY)  # 变成黑白
-        x = 500
-        y = 500
-        w = 1000
-        h = 1500
-        img = img[x:x + w, y:y + h]
-        # img = cv2.equalizeHist(img)
-        # clahe = cv2.createCLAHE(clipLimit=4, tileGridSize=(10, 5))
-        # gray = clahe.apply(gray)
-        # size = (224, 224)
-        # size = (50, 50)
-        # img = cv2.resize(img, size)
-        hist_0 = cv2.calcHist([img], [0], None, [256], [0, 256])
-        hist_1 = cv2.calcHist([img], [1], None, [256], [0, 256])
-        hist_2 = cv2.calcHist([img], [2], None, [256], [0, 256])
-        hist_0 = torch.Tensor(hist_0)
-        hist_1 = torch.Tensor(hist_1)
-        hist_2 = torch.Tensor(hist_2)
-        hist = torch.stack((hist_0, hist_1, hist_2), 0)
-        # hist = [hist_0,hist_1,hist_2]
-        # img = np.array(Image.open(filename))
-        # img_co = img.copy()
-        # i_r, i_g, i_b = img[:, :, 0], img[:, :, 1], img[:, :, 2]
-        # i_r = hist_ave_2(i_r)
-        # i_g = hist_ave_2(i_g)
-        # i_b = hist_ave_2(i_b)
-        # img_co[:, :, 0] = i_r
-        # img_co[:, :, 1] = i_g
-        # img_co[:, :, 2] = i_b
-        # size = (50, 50)
-        # img = cv2.resize(img_co, size)
-        # hist = cv2.calcHist([img], [0], None, [256], [0, 256])
+        # # gray = cv2.cvtColor(gray, cv2.COLOR_BGR2GRAY)  # 变成黑白
+        # x = 500
+        # y = 500
+        # w = 1000
+        # h = 1500
+        # img = img[x:x + w, y:y + h]
+        # # img = cv2.equalizeHist(img)
+        # # clahe = cv2.createCLAHE(clipLimit=4, tileGridSize=(10, 5))
+        # # gray = clahe.apply(gray)
+        # # size = (224, 224)
+        # # size = (50, 50)
+        # # img = cv2.resize(img, size)
+        # hist_0 = cv2.calcHist([img], [0], None, [256], [0, 256])
+        # hist_1 = cv2.calcHist([img], [1], None, [256], [0, 256])
+        # hist_2 = cv2.calcHist([img], [2], None, [256], [0, 256])
+        # hist_0 = torch.Tensor(hist_0)
+        # hist_1 = torch.Tensor(hist_1)
+        # hist_2 = torch.Tensor(hist_2)
+        # hist = torch.stack((hist_0, hist_1, hist_2), 0)
+        # print(hist.shape)
+
+        hist = Group_2G_R_B(img)
+        # hist = Group_GRGB(img)
+        # hist = Group_RG(img)
+        # hist = Group_GR(img)
+        # hist = Group_lab(img)
+
+        img = np.array(Image.open(filename).resize((160, 120)).convert('L'))
+        # texture_feat = fast_glcm_std(img)
+        # texture_feat = fast_glcm_contrast(img)
+        # texture_feat = fast_glcm_dissimilarity(img)
+        # texture_feat = fast_glcm_homogeneity(img)
+        # texture_feat = fast_glcm_ASM(img)
+        # texture_feat = fast_glcm_ENE(img)
+        texture_feat = fast_glcm_max(img)
+        # texture_feat = fast_glcm_entropy(img)
+        texture_feat = torch.Tensor(texture_feat)
+        texture_feat = torch.reshape(texture_feat, (3, 256, -1))
+        hist = torch.cat((hist, texture_feat), dim=2)
+
+        # img = np.array(Image.open(filename).convert('L'))
+        # # texture_feat = fast_glcm_std(img)
+        # # texture_feat = fast_glcm_contrast(img)
+        # # texture_feat = fast_glcm_dissimilarity(img)
+        # # texture_feat = fast_glcm_homogeneity(img)
+        # texture_feat = fast_glcm_ASM(img)
+        # # texture_feat = fast_glcm_ENE(img)
+        # # texture_feat = fast_glcm_max(img)
+        # # texture_feat = fast_glcm_entropy(img)
+        # texture_feat = torch.Tensor(texture_feat)
+        # texture_feat = torch.unsqueeze(texture_feat,0)
+        # texture_feat = torch.unsqueeze(texture_feat, 0)
+        # texture_feat = torch.nn.functional.interpolate(texture_feat, size=(256, 1), mode='bilinear',
+        #                                                           align_corners=False)
+        # texture_feat = torch.squeeze(texture_feat, 0)
+        # hist = torch.cat((hist, texture_feat), dim=0)
+        # print(hist.shape)
         return (hist, times, filename)
 
 
@@ -229,16 +254,16 @@ if __name__ == "__main__":
     # generate_all_txt(root="/home/llj/code/test/data", txt_dir="/home/llj/code/test/")
     # split_train_test("/home/llj/code/test/")
     #
-    # generate_all_txt2(root="/home/llj/code/test/data2", txt_dir="/home/llj/code/test/")
+    generate_all_txt2(root="/home/llj/code/test/data2", txt_dir="/home/llj/code/test/")
     # split_train_test2("/home/llj/code/test/")
 
     # split_data("/home/llj/code/test/")
-    # split_data2("/home/llj/code/test/")
+    split_data2("/home/llj/code/test/")
 
-    # with open(os.path.join("/home/llj/code/test/", "all2.0txt"), "r", encoding="utf-8") as f:
+    # with open(os.path.join("/home/llj/code/test/", "1.txt"), "r", encoding="utf-8") as f:
     #     data = f.readlines()
     # random.shuffle(data)
-    # with open(os.path.join("/home/llj/code/test/", "test2.txt"), "w", encoding="utf-8") as f:
+    # with open(os.path.join("/home/llj/code/test/", "1.txt"), "w", encoding="utf-8") as f:
     #     lines = f.writelines(data)
 
     # transform1 = transforms.Compose([

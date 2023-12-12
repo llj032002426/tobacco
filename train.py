@@ -20,6 +20,8 @@ from main import BatchDataset
 from models import Model
 from models import RestNet18
 from models import ResNet_50
+from models import MobileNetV3_Small
+from models import MobileNetV3_Large
 import utils
 # os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
@@ -35,8 +37,10 @@ def main(args):
     # model = Model()
     # model = RestNet18()
     model = ResNet_50()
+    # model = MobileNetV3_Small()
+    # model = MobileNetV3_Large()
 
-    # model = nn.Sequential(nn.Flatten(), nn.Linear(256, 1))
+    # model = nn.Sequential(nn.Flatten(), nn.Linear(1024, 1))
     # model = nn.Sequential(nn.Flatten(), nn.Linear(150528, 1))
 
     model.to(device)
@@ -65,16 +69,18 @@ def main(args):
 
     # 定义数据预处理的操作，包括将图像转换为张量、调整图像大小、应用透视变换和随机旋转等
     transform1 = transforms.Compose([
-        transforms.ColorJitter(contrast=0.8)
-        # transforms.ToTensor(),
-        # transforms.Resize([args.img_size, args.img_size], antialias=True),
-        # transforms.RandomPerspective(distortion_scale=0.6, p=1.0),
-        # transforms.RandomRotation(degrees=(0, 180)),
+        # transforms.ColorJitter(contrast=0.8)
+
+        transforms.ToTensor(),
+        transforms.Resize([args.img_size, args.img_size], antialias=True),
+        transforms.RandomPerspective(distortion_scale=0.6, p=1.0),
+        transforms.RandomRotation(degrees=(0, 180)),
     ])
     transform2 = transforms.Compose([
-        transforms.ColorJitter(contrast=0.8)
-        # transforms.ToTensor(),
-        # transforms.Resize([args.img_size, args.img_size], antialias=True),
+        # transforms.ColorJitter(contrast=0.8)
+
+        transforms.ToTensor(),
+        transforms.Resize([args.img_size, args.img_size], antialias=True),
     ])
     # 创建训练集和验证集的数据集对象，包括图像和标签
     train_dataset = BatchDataset(args.root, args.txt_dir, "train", transform=transform1)
@@ -141,7 +147,8 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
     meter = utils.AverageMeter()
     total = len(train_loader)
     for i, (inputs, times, filenames) in enumerate(train_loader):
-        inputs = torch.reshape(inputs, (-1, 3, 16, 16))
+        # inputs = torch.reshape(inputs, (-1, 3, 16, 16))
+        # inputs = torch.reshape(inputs, (-1, 4, 16, 16))
         inputs = inputs.to(device)
         # print(inputs)
         # print(inputs.shape)
@@ -197,7 +204,8 @@ def validate(val_loader, model, criterion, epoch, args):
     with torch.no_grad():
         total = len(val_loader)
         for i, (inputs, times, filenames) in enumerate(val_loader):
-            inputs = torch.reshape(inputs, (-1, 3, 16, 16))
+            # inputs = torch.reshape(inputs, (-1, 3, 16, 16))
+            # inputs = torch.reshape(inputs, (-1, 4, 16, 16))
             inputs = inputs.to(device)
             # print(inputs.shape)
 
@@ -206,11 +214,13 @@ def validate(val_loader, model, criterion, epoch, args):
 
             time_pd = model(inputs)
             # time_pd = softmax(time_pd)
+            # print(times)
             # print(time_pd)
             # print(time_pd.shape)
             # time_pd = abs(time_pd)
 
             loss = criterion(time_pd, times)
+            # print(loss)
             # acc = utils.accuracy(time_pd, times)
             # acc = torch.eq(time_pd, times).float().mean()
             # acc=0
