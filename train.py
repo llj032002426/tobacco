@@ -34,6 +34,7 @@ def main(args):
     # 初始化模型
     # model = Model(pretrained=True)
     # model = Model(3,1,True)
+    # model = Model(4, 1, True)
     # model = Model()
     # model = RestNet18()
     model = ResNet_50()
@@ -148,7 +149,8 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
     total = len(train_loader)
     for i, (inputs, times, filenames) in enumerate(train_loader):
         # inputs = torch.reshape(inputs, (-1, 3, 16, 16))
-        # inputs = torch.reshape(inputs, (-1, 4, 16, 16))
+        inputs = torch.reshape(inputs, (-1, 4, 16, 16))
+        # inputs = torch.reshape(inputs, (-1, 7, 16, 16))‘
         inputs = inputs.to(device)
         # print(inputs)
         # print(inputs.shape)
@@ -173,7 +175,8 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         # acc = torch.eq(torch.round(time_pd * 100), torch.round(times * 100)).float().cpu().mean()
         # print(acc)
         # print(torch.sub(torch.round(time_pd * 100), torch.round(times * 100)))
-        acc = torch.le(abs(torch.sub(torch.round(time_pd * 100), torch.round(times * 100))), 3).float().cpu().mean()
+        acc = torch.le(abs(torch.sub(torch.round(time_pd * 144), torch.round(times * 144))), 3).float().cpu().mean()
+        # acc = torch.le(abs(torch.sub(torch.round(time_pd * 200), torch.round(times * 200))), 6).float().cpu().mean()
         # acc = torch.eq(torch.round(time_pd), torch.round(times)).float().cpu().mean()
         # print(torch.ceil(time_pd))
         # print(torch.ceil(times))
@@ -205,7 +208,8 @@ def validate(val_loader, model, criterion, epoch, args):
         total = len(val_loader)
         for i, (inputs, times, filenames) in enumerate(val_loader):
             # inputs = torch.reshape(inputs, (-1, 3, 16, 16))
-            # inputs = torch.reshape(inputs, (-1, 4, 16, 16))
+            inputs = torch.reshape(inputs, (-1, 4, 16, 16))
+            # inputs = torch.reshape(inputs, (-1, 7, 16, 16))
             inputs = inputs.to(device)
             # print(inputs.shape)
 
@@ -226,7 +230,8 @@ def validate(val_loader, model, criterion, epoch, args):
             # acc=0
             # acc = torch.eq(torch.ceil(time_pd), torch.ceil(times)).float().cpu().mean()
             # acc = torch.eq(torch.round(time_pd*100), torch.round(times*100)).float().cpu().mean()
-            acc = torch.le(abs(torch.sub(torch.round(time_pd * 100), torch.round(times * 100))), 3).float().cpu().mean()
+            # acc = torch.le(abs(torch.sub(torch.round(time_pd * 100), torch.round(times * 100))), 6).float().cpu().mean()
+            acc = torch.le(abs(torch.sub(torch.round(time_pd * 144), torch.round(times * 144))), 3).float().cpu().mean()
             # acc = torch.eq(torch.round(time_pd), torch.round(times)).float().cpu().mean()
             # acc = acc1(time_pd, times)
             meter.add({"loss": loss.item(), "acc": acc})

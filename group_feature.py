@@ -4,10 +4,9 @@ import matplotlib.pyplot as plt
 import torch
 
 #2G-R-B
-def GroupShow_2G_R_B():
+def GroupShow_2G_R_B(src):
     # 使用2g-r-b分离土壤与背景
-    src = cv2.imread('/home/llj/code/test/data2/20230701/082405_ch01.jpg')
-    src = cv2.resize(src, None, fx=0.3, fy=0.3)
+    src = cv2.resize(src, None, fx=0.2, fy=0.2)
     cv2.imshow('src', src)
 
     # 转换为浮点数进行计算
@@ -32,6 +31,9 @@ def GroupShow_2G_R_B():
     (b8, g8, r8) = cv2.split(src)
     color_img = cv2.merge([b8 & bin_img, g8 & bin_img, r8 & bin_img])
     cv2.imshow('color_img', color_img)
+    (b, g, r) = cv2.split(color_img)
+    merged = cv2.merge([b, 2*g-b-r, r])
+    cv2.imshow('color_img', merged)
 
     cv2.waitKey()
     cv2.destroyAllWindows()
@@ -77,19 +79,19 @@ def Group_2G_R_B(src):
     return hist
 
 #G/(R+G+B)
-def GroupShow_GRGB():
+def GroupShow_GB(src):
     # 使用2g-r-b分离土壤与背景
-    src = cv2.imread('/home/llj/code/test/data2/20230701/082405_ch01.jpg')
     src = cv2.resize(src, None, fx=0.3, fy=0.3)
     cv2.imshow('src', src)
 
     # 转换为浮点数进行计算
     fsrc = np.array(src, dtype=np.float32) / 255.0
     (b, g, r) = cv2.split(fsrc)
-    np.seterr(divide='ignore', invalid='ignore')  # 消除被除数为0的警告
-    gray = g/(r+g+b)
-    gray[np.isnan(gray)] = 0.0
-    gray[np.isinf(gray)] = 0.0
+    # np.seterr(divide='ignore', invalid='ignore')  # 消除被除数为0的警告
+    # gray = g/(r+g+b)
+    # gray[np.isnan(gray)] = 0.0
+    # gray[np.isinf(gray)] = 0.0
+    gray = g - b
 
     # 求取最大值和最小值
     (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(gray)
@@ -111,8 +113,7 @@ def GroupShow_GRGB():
 
     cv2.waitKey()
     cv2.destroyAllWindows()
-
-def Group_GRGB(src):
+def Group_GB(src):
     # 使用2g-r-b分离土壤与背景
     src = cv2.resize(src, None, fx=0.3, fy=0.3)
     # cv2.imshow('src', src)
@@ -120,10 +121,7 @@ def Group_GRGB(src):
     # 转换为浮点数进行计算
     fsrc = np.array(src, dtype=np.float32) / 255.0
     (b, g, r) = cv2.split(fsrc)
-    np.seterr(divide='ignore', invalid='ignore')  # 消除被除数为0的警告
-    gray = g / (r + g + b)
-    gray[np.isnan(gray)] = 0.0
-    gray[np.isinf(gray)] = 0.0
+    gray = g - b
 
     # 求取最大值和最小值
     (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(gray)
@@ -146,29 +144,32 @@ def Group_GRGB(src):
     hist_0 = cv2.calcHist([color_img], [0], None, [256], [0, 256])
     hist_1 = cv2.calcHist([color_img], [1], None, [256], [0, 256])
     hist_2 = cv2.calcHist([color_img], [2], None, [256], [0, 256])
+    # plt.plot(hist_0, label='0', color='blue')
+    # plt.plot(hist_1, label='1', color='green')
+    # plt.plot(hist_2, label='2', color='red')
+    # plt.legend(loc='best')
+    # plt.xlim([0, 256])
+    # plt.show()
     hist_0 = torch.Tensor(hist_0)
     hist_1 = torch.Tensor(hist_1)
     hist_2 = torch.Tensor(hist_2)
     hist = torch.stack((hist_0, hist_1, hist_2), 0)
-    # print(hist.shape)
+    # print(hist_0)
     # cv2.waitKey()
     # cv2.destroyAllWindows()
     return hist
 
 #R/G
-def GroupShow_RG():
+def GroupShow_RB(src):
     # 使用2g-r-b分离土壤与背景
-    src = cv2.imread('/home/llj/code/test/data2/20230701/082405_ch01.jpg')
     src = cv2.resize(src, None, fx=0.3, fy=0.3)
     cv2.imshow('src', src)
 
     # 转换为浮点数进行计算
     fsrc = np.array(src, dtype=np.float32) / 255.0
     (b, g, r) = cv2.split(fsrc)
-    np.seterr(divide='ignore', invalid='ignore')  # 消除被除数为0的警告
-    gray = r/g
-    gray[np.isnan(gray)] = 0.0
-    gray[np.isinf(gray)] = 0.0
+    gray = r - b
+
     # print(gray)
     # gray = np.divide(r, g, out=np.zeros_like(r, dtype=np.float64), where=g != 0)
     # gray = np.uint8(gray)
@@ -194,29 +195,31 @@ def GroupShow_RG():
 
     cv2.waitKey()
     cv2.destroyAllWindows()
-def Group_RG(src):
+def Group_RBimg(src):
+    # src = cv2.resize(src, None, fx=0.2, fy=0.2)
+    fsrc = np.array(src, dtype=np.float32) / 255.0
+    (b, g, r) = cv2.split(fsrc)
+    gray = r - b
+    (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(gray)
+    gray_u8 = np.array((gray - minVal) / (maxVal - minVal) * 255, dtype=np.uint8)
+    (thresh, bin_img) = cv2.threshold(gray_u8, -1.0, 255, cv2.THRESH_OTSU)
+    (b8, g8, r8) = cv2.split(src)
+    color_img = cv2.merge([b8 & bin_img, g8 & bin_img, r8 & bin_img])
+    return color_img
+def Group_RB(src):
     # with np.seterr(divide='ignore', invalid='ignore'):
     # 使用2g-r-b分离土壤与背景
-    src = cv2.resize(src, None, fx=0.3, fy=0.3)
+    # src = cv2.resize(src, None, fx=0.3, fy=0.3)
     # cv2.imshow('src', src)
 
     # 转换为浮点数进行计算
     fsrc = np.array(src, dtype=np.float32) / 255.0
     (b, g, r) = cv2.split(fsrc)
-    np.seterr(divide='ignore', invalid='ignore')  # 消除被除数为0的警告
-    gray = r / g
-    gray[np.isnan(gray)] = 0.0
-    gray[np.isinf(gray)] = 0.0
+    gray = r - b  # 获取红色通道减去蓝色通道得到的灰度图像
 
-    # 求取最大值和最小值
+    # 计算灰度图像中的最小值、最大值及其对应的位置
     (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(gray)
-
-    # 计算直方图
-    # hist = cv2.calcHist([gray], [0], None, [256], [minVal, maxVal])
-    # plt.plot(hist)
-    # plt.show()
-
-    # 转换为u8类型，进行otsu二值化
+    # 转换为u8类型，进行otsu二值化  将灰度图像线性映射到每个像素值（0-255）范围内，转换为无符号8位整型数组。
     gray_u8 = np.array((gray - minVal) / (maxVal - minVal) * 255, dtype=np.uint8)
     (thresh, bin_img) = cv2.threshold(gray_u8, -1.0, 255, cv2.THRESH_OTSU)
     # cv2.imshow('bin_img', bin_img)
@@ -239,10 +242,9 @@ def Group_RG(src):
     return hist
 
 #G-R
-def GroupShow_GR():
+def GroupShow_GR(src):
     # 使用2g-r-b分离土壤与背景
-    src = cv2.imread('/home/llj/code/test/data2/20230701/082405_ch01.jpg')
-    src = cv2.resize(src, None, fx=0.3, fy=0.3)
+    src = cv2.resize(src, None, fx=0.2, fy=0.2)
     cv2.imshow('src', src)
 
     # 转换为浮点数进行计算
@@ -346,10 +348,18 @@ def GroupShow_lab():
 
 def Group_lab(img_bgr):
     # 读取图片
-    # img_bgr = cv2.imread(pic_file, cv2.IMREAD_COLOR)
-    img_lab = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2LAB)
-    # cv2.namedWindow("input", cv2.WINDOW_GUI_NORMAL)
-    # cv2.imshow("input", img_lab)
+    # img_lab = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2LAB)
+
+    src = cv2.resize(img_bgr, None, fx=0.3, fy=0.3)
+    fsrc = np.array(src, dtype=np.float32) / 255.0
+    (b, g, r) = cv2.split(fsrc)
+    gray = r - b
+    (minVal, maxVal, minLoc, maxLoc) = cv2.minMaxLoc(gray)
+    gray_u8 = np.array((gray - minVal) / (maxVal - minVal) * 255, dtype=np.uint8)
+    (thresh, bin_img) = cv2.threshold(gray_u8, -1.0, 255, cv2.THRESH_OTSU)
+    (b8, g8, r8) = cv2.split(src)
+    color_img = cv2.merge([b8 & bin_img, g8 & bin_img, r8 & bin_img])
+    img_lab = cv2.cvtColor(color_img, cv2.COLOR_BGR2LAB)
 
     # 分别获取三个通道的ndarray数据
     img_ls = img_lab[:, :, 0]
@@ -372,17 +382,21 @@ def Group_lab(img_bgr):
     return hist
 
 if __name__ == "__main__":
-    src = cv2.imread('/home/llj/code/test/data2/20230701/082405_ch01.jpg')
-    # GroupShow_2G_R_B()
+    # src = cv2.imread('/home/llj/code/test/data2/20230701/061802_ch01.jpg')
+    # src = cv2.imread('/home/llj/code/test/data/20230616/123338_ch01.jpg')
+    src = cv2.imread('/home/llj/code/test/data/20230615/122456_ch01.jpg')
+    # src = cv2.imread('/home/llj/code/test/data/20230610/184915_ch01.jpg')
+    # src = cv2.imread('/home/llj/code/test/data/20230612/010101_ch01.jpg')
+    # GroupShow_2G_R_B(src)
     # Group_2G_R_B(src)
 
-    # GroupShow_GRGB()
-    # Group_GRGB(src)
+    # GroupShow_GB(src)
+    # Group_GB(src)
 
-    # GroupShow_RG()
-    # Group_RG(src)
+    GroupShow_RB(src)
+    # Group_RB(src)
 
-    # GroupShow_GR()
+    # GroupShow_GR(src)
     # Group_GR(src)
 
     # GroupShow_lab()

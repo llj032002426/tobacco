@@ -50,6 +50,8 @@ def eval():
         for i, (inputs, times, filenames) in enumerate(loader):
             print("{:<5}/{:<5}".format(i, total), end="\r")
             # inputs = torch.reshape(inputs, (-1, 3, 16, 16))
+            inputs = torch.reshape(inputs, (-1, 4, 16, 16))
+            # inputs = torch.reshape(inputs, (-1, 7, 16, 16))
             inputs = inputs.to(device)
             # print(inputs)
             times = times.to(device)
@@ -59,9 +61,13 @@ def eval():
             # print(time_pd)
 
             for j in range(inputs.shape[0]):
+                # fp.write("{},{},{}\n".format(
+                #     filenames[j], round(times[j].item()*100),
+                #     round(time_pd[j].item()*100)
+                # ))
                 fp.write("{},{},{}\n".format(
-                    filenames[j], round(times[j].item()*100),
-                    round(time_pd[j].item()*100)
+                    filenames[j], round(times[j].item()*144),
+                    round(time_pd[j].item()*144)
                 ))
 
         print("{:<5}/{:<5}".format(i, total))
@@ -88,8 +94,8 @@ def metrics():
             # loss += (int(time_gt)/100.0 - int(time_pd)/100.0)**2
             loss += (int(time_gt) - int(time_pd)) ** 2
             # loss += (float(time_gt) / 100.0 - float(time_pd) / 100.0) ** 2
-            # if int(time_gt) == int(time_pd) :
-            if abs(int(time_gt) - int(time_pd))<6 :
+            if int(time_gt) == int(time_pd) :
+            # if abs(int(time_gt) - int(time_pd))<=3 :
             # time_gt = int(time_gt)
             # time_pd = int(time_pd)
             # if Acc(time_gt, time_pd):
@@ -106,7 +112,7 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--num_workers", type=int, default=4)
     parser.add_argument("--img_size", type=int, default=224)
-    parser.add_argument("--weights", type=str, default="./middle/models/llj-20231211-163647-best.pth", help="pretrain weight path")
+    parser.add_argument("--weights", type=str, default="./middle/models/llj-20231222-111711-best.pth", help="pretrain weight path")
     parser.add_argument("--experiment_name", type=str, default="llj",help="experiment name")
     # parser.add_argument("--mode", type=str, required=True, choices=["eval", "metrics"])
     parser.add_argument("--mode", type=str, default="eval")

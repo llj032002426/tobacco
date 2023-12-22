@@ -222,7 +222,7 @@ class RestNetDownBlock(nn.Module):
 class RestNet18(nn.Module):
     def __init__(self):
         super(RestNet18, self).__init__()
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3)
+        self.conv1 = nn.Conv2d(4, 64, kernel_size=7, stride=2, padding=3)
         self.bn1 = nn.BatchNorm2d(64)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
@@ -293,7 +293,7 @@ class ResNet_50(nn.Module):
         super(ResNet_50, self).__init__()
         self.inchannel = 64
         self.conv1 = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.Conv2d(4, 64, kernel_size=3, stride=1, padding=1, bias=False),
             nn.BatchNorm2d(64),
             nn.ReLU(),
         )
@@ -301,7 +301,7 @@ class ResNet_50(nn.Module):
         self.layer2 = self.make_layer(Bottleneck, 512, 4, stride=2)
         self.layer3 = self.make_layer(Bottleneck, 1024, 6, stride=2)
         self.layer4 = self.make_layer(Bottleneck, 2048, 3, stride=2)
-        self.fc = nn.Linear(512 * 32, 1)
+        self.fc = nn.Linear(512 * 2, 1)
         # **************************
 
     def make_layer(self, block, channels, num_blocks, stride):

@@ -9,8 +9,8 @@ import numpy as np
 import scipy.io as sio
 from PIL import Image
 from torch.utils.data import Dataset
-from group_feature import Group_2G_R_B,Group_GRGB,Group_RG,Group_GR,Group_lab
-from textural_feature import fast_glcm_std,fast_glcm_contrast,fast_glcm_dissimilarity,fast_glcm_homogeneity,fast_glcm_ASM,fast_glcm_ENE,fast_glcm_max,fast_glcm_entropy
+from group_feature import Group_2G_R_B,Group_GB,Group_RB,Group_GR,Group_lab,Group_RBimg
+from textural_feature import fast_glcm_mean,fast_glcm_std,fast_glcm_contrast,fast_glcm_dissimilarity,fast_glcm_homogeneity,fast_glcm_ASM,fast_glcm_ENE,fast_glcm_max,fast_glcm_entropy,all_glcm
 from PIL import  Image
 import os
 import numpy as np
@@ -35,7 +35,7 @@ def generate_all_txt(root, txt_dir, num_samples=None):
         s = tuple(time.strptime(start, "%Y-%m-%d"))
         d2 = datetime.date(s[0], s[1], s[2])
         # times=(d1 - d2).days*24+int(file_name[:2])+round(int(file_name[2:4])/60,3)
-        times = (d1 - d2).days * 24 + int(file_name[:2])
+        times = (d1 - d2).days * 24 + int(file_name[:2])-17
 
         # times = int(times / 6)
         # print(times)
@@ -58,7 +58,7 @@ def generate_all_txt2(root, txt_dir, num_samples=None):
         s = tuple(time.strptime(start, "%Y-%m-%d"))
         d2 = datetime.date(s[0], s[1], s[2])
         # times=(d1 - d2).days*24+int(file_name[:2])+round(int(file_name[2:4])/60,3)
-        times = (d1 - d2).days * 24 + int(file_name[:2])
+        times = (d1 - d2).days * 24 + int(file_name[:2])-11
 
         # times = int(times / 6)
         # print(times)
@@ -181,8 +181,8 @@ class BatchDataset(Dataset):
         # image = self.transform(image)
         img = cv2.imread(filename, 1)
 
-        # times = np.float32(int(times)/100.0)
-        times = np.float32(int(times)/ 100.0)
+        # times = np.float32(int(times)/ 100.0)
+        times = np.float32(int(times)/ 144.0)
         # times = np.float32(float(times)/100.0)
         # return (image, times, filename)
 
@@ -205,36 +205,38 @@ class BatchDataset(Dataset):
         # hist_1 = torch.Tensor(hist_1)
         # hist_2 = torch.Tensor(hist_2)
         # hist = torch.stack((hist_0, hist_1, hist_2), 0)
+        # # print(hist.shape)
+
+        # hist = Group_2G_R_B(img)
+        # hist = Group_GB(img)
+        # hist = Group_RB(img)
+        # hist = Group_GR(img)
+        # hist2 = Group_lab(img)
+
+        # hist = torch.cat((hist, hist2), dim=0)
         # print(hist.shape)
 
-        hist = Group_2G_R_B(img)
-        # hist = Group_GRGB(img)
-        # hist = Group_RG(img)
-        # hist = Group_GR(img)
-        # hist = Group_lab(img)
-
-        img = np.array(Image.open(filename).resize((160, 120)).convert('L'))
-        # texture_feat = fast_glcm_std(img)
-        # texture_feat = fast_glcm_contrast(img)
-        # texture_feat = fast_glcm_dissimilarity(img)
-        # texture_feat = fast_glcm_homogeneity(img)
-        # texture_feat = fast_glcm_ASM(img)
-        # texture_feat = fast_glcm_ENE(img)
-        texture_feat = fast_glcm_max(img)
-        # texture_feat = fast_glcm_entropy(img)
-        texture_feat = torch.Tensor(texture_feat)
-        texture_feat = torch.reshape(texture_feat, (3, 256, -1))
-        hist = torch.cat((hist, texture_feat), dim=2)
-
-        # img = np.array(Image.open(filename).convert('L'))
+        # img = np.array(Image.open(filename).resize((160, 120)).convert('L'))
+        src = cv2.imread(filename)
+        image_array = Group_RBimg(src)
+        hist_0 = cv2.calcHist([image_array], [0], None, [256], [0, 256])
+        hist_1 = cv2.calcHist([image_array], [1], None, [256], [0, 256])
+        hist_2 = cv2.calcHist([image_array], [2], None, [256], [0, 256])
+        hist_0 = torch.Tensor(hist_0)
+        hist_1 = torch.Tensor(hist_1)
+        hist_2 = torch.Tensor(hist_2)
+        hist = torch.stack((hist_0, hist_1, hist_2), 0)
+        # # img = np.array(Image.fromarray(image_array).resize((160, 120)).convert('L'))
+        # # texture_feat = fast_glcm_mean(img)
         # # texture_feat = fast_glcm_std(img)
         # # texture_feat = fast_glcm_contrast(img)
         # # texture_feat = fast_glcm_dissimilarity(img)
         # # texture_feat = fast_glcm_homogeneity(img)
-        # texture_feat = fast_glcm_ASM(img)
+        # # texture_feat = fast_glcm_ASM(img)
         # # texture_feat = fast_glcm_ENE(img)
         # # texture_feat = fast_glcm_max(img)
-        # # texture_feat = fast_glcm_entropy(img)
+        # texture_feat = fast_glcm_entropy(img)
+        # # texture_feat = all_glcm(img)
         # texture_feat = torch.Tensor(texture_feat)
         # texture_feat = torch.unsqueeze(texture_feat,0)
         # texture_feat = torch.unsqueeze(texture_feat, 0)
@@ -243,28 +245,51 @@ class BatchDataset(Dataset):
         # texture_feat = torch.squeeze(texture_feat, 0)
         # hist = torch.cat((hist, texture_feat), dim=0)
         # print(hist.shape)
+
+        if times > 120:
+            # 随机噪声 - 可根据需求设置噪声的范围和分布
+            noise = np.random.normal(0, 1)  # 均值为0，标准差为1的正态分布随机数
+
+            # 偏移 - 可根据需求设置偏移的范围和方式
+            offset = np.random.uniform(-10, 10)  # 从-10到10之间均匀采样的随机数
+
+            # 缩放 - 可根据需求设置缩放的范围和方式
+            scale = np.random.uniform(0.8, 1.2)  # 从0.8到1.2之间均匀采样的随机数
+
+            # 对数据进行随机扰动
+            times = times + offset  # 添加偏移
+            times = times * scale  # 缩放目标值
+            times = times + noise  # 添加噪声
         return (hist, times, filename)
 
 
     def __len__(self):
         return len(self.lines)
 
+
+def normalization(path):
+    with open(path, "r", encoding="utf-8-sig") as f:
+        f.readline()
+        for line in f:
+            filename, time_gt,time_pd= line.strip().split(",")
+
+
 if __name__ == "__main__":
     pass
-    # generate_all_txt(root="/home/llj/code/test/data", txt_dir="/home/llj/code/test/")
+    generate_all_txt(root="/home/llj/code/test/data", txt_dir="/home/llj/code/test/")
     # split_train_test("/home/llj/code/test/")
-    #
+
     generate_all_txt2(root="/home/llj/code/test/data2", txt_dir="/home/llj/code/test/")
     # split_train_test2("/home/llj/code/test/")
 
-    # split_data("/home/llj/code/test/")
+    split_data("/home/llj/code/test/")
     split_data2("/home/llj/code/test/")
 
-    # with open(os.path.join("/home/llj/code/test/", "1.txt"), "r", encoding="utf-8") as f:
-    #     data = f.readlines()
-    # random.shuffle(data)
-    # with open(os.path.join("/home/llj/code/test/", "1.txt"), "w", encoding="utf-8") as f:
-    #     lines = f.writelines(data)
+    with open(os.path.join("/home/llj/code/test/", "all2.txt"), "r", encoding="utf-8") as f:
+        data = f.readlines()
+    random.shuffle(data)
+    with open(os.path.join("/home/llj/code/test/", "all2.txt"), "w", encoding="utf-8") as f:
+        lines = f.writelines(data)
 
     # transform1 = transforms.Compose([
     #     transforms.ToTensor(),
