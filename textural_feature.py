@@ -216,7 +216,8 @@ if __name__ == '__main__':
     # img = '/home/llj/code/test/data/20230616/123338_ch01.jpg'
     src = cv2.imread('/home/llj/code/test/data/20230615/122456_ch01.jpg')
     image_array = Group_RBimg(src)
-    img = np.array(Image.fromarray(image_array).resize((160,120)).convert('L'))
+    # img = np.array(Image.fromarray(image_array).resize((160,120)).convert('L'))
+    img = np.array(Image.fromarray(image_array).convert('L'))
     # print(type(img))
     # img = np.array(Image.open(img).convert('L'))
     # img = np.array(Image.open(img).resize((160,120)).convert('L'))
@@ -224,92 +225,35 @@ if __name__ == '__main__':
     # h, w = img.shape
     # print(img.shape)
 
-    mean = fast_glcm_mean(img)
+    mean = fast_glcm_mean(img)#均值
     # print(mean)
     # scaler = MinMaxScaler()
     # scaled_data = scaler.fit_transform(mean)
     # print(scaled_data)
     # print(mean.shape)
     # print(type(mean))
-    std = fast_glcm_std(img)
-    cont = fast_glcm_contrast(img)
-    diss = fast_glcm_dissimilarity(img)
-    homo = fast_glcm_homogeneity(img)
-    asm = fast_glcm_ASM(img)
+    std = fast_glcm_std(img)#方差
+    cont = fast_glcm_contrast(img)#对比度
+    diss = fast_glcm_dissimilarity(img)#非相似性
+    homo = fast_glcm_homogeneity(img)#同质度
+    asm = fast_glcm_ASM(img)#角二阶矩
     ene = fast_glcm_ENE(img)
     ma = fast_glcm_max(img)
-    ent = fast_glcm_entropy(img)
+    ent = fast_glcm_entropy(img)#熵
 
     # 归一化0-1
-    scaler = MinMaxScaler()
-    scaled_mean = scaler.fit_transform(mean)
-    scaled_std = scaler.fit_transform(std)
-    scaled_cont = scaler.fit_transform(cont)
-    scaled_diss = scaler.fit_transform(diss)
-    scaled_homo = scaler.fit_transform(homo)
-    scaled_asm = scaler.fit_transform(asm)
-    scaled_ene = scaler.fit_transform(ene)
-    scaled_ma = scaler.fit_transform(ma)
-    scaled_ent = scaler.fit_transform(ent)
+    # scaler = MinMaxScaler()
+    # scaled_mean = scaler.fit_transform(mean)
+    # scaled_std = scaler.fit_transform(std)
+    # scaled_cont = scaler.fit_transform(cont)
+    # scaled_diss = scaler.fit_transform(diss)
+    # scaled_homo = scaler.fit_transform(homo)
+    # scaled_asm = scaler.fit_transform(asm)
+    # scaled_ene = scaler.fit_transform(ene)
+    # scaled_ma = scaler.fit_transform(ma)
+    # scaled_ent = scaler.fit_transform(ent)
 
 
-    # plt.figure(figsize=(10, 4.5))
-    # fs = 15
-    # plt.subplot(2, 5, 1)
-    # plt.tick_params(labelbottom=False, labelleft=False)
-    # plt.imshow(img)
-    # plt.title('original', fontsize=fs)
-    #
-    # plt.subplot(2, 5, 2)
-    # plt.tick_params(labelbottom=False, labelleft=False)
-    # plt.imshow(mean)
-    # plt.title('mean', fontsize=fs)
-    #
-    # plt.subplot(2, 5, 3)
-    # plt.tick_params(labelbottom=False, labelleft=False)
-    # plt.imshow(std)
-    # plt.title('std', fontsize=fs)
-    #
-    # plt.subplot(2, 5, 4)
-    # plt.tick_params(labelbottom=False, labelleft=False)
-    # plt.imshow(cont)
-    # plt.title('contrast', fontsize=fs)
-    #
-    # plt.subplot(2, 5, 5)
-    # plt.tick_params(labelbottom=False, labelleft=False)
-    # plt.imshow(diss)
-    # plt.title('dissimilarity', fontsize=fs)
-    #
-    # plt.subplot(2, 5, 6)
-    # plt.tick_params(labelbottom=False, labelleft=False)
-    # plt.imshow(homo)
-    # plt.title('homogeneity', fontsize=fs)
-    #
-    # plt.subplot(2, 5, 7)
-    # plt.tick_params(labelbottom=False, labelleft=False)
-    # plt.imshow(asm)
-    # plt.title('ASM', fontsize=fs)
-    #
-    # plt.subplot(2, 5, 8)
-    # plt.tick_params(labelbottom=False, labelleft=False)
-    # plt.imshow(ene)
-    # plt.title('energy', fontsize=fs)
-    #
-    # plt.subplot(2, 5, 9)
-    # plt.tick_params(labelbottom=False, labelleft=False)
-    # plt.imshow(ma)
-    # plt.title('max', fontsize=fs)
-    #
-    # plt.subplot(2, 5, 10)
-    # plt.tick_params(labelbottom=False, labelleft=False)
-    # plt.imshow(ent)
-    # plt.title('entropy', fontsize=fs)
-    #
-    # plt.tight_layout(pad=0.5)
-    # plt.savefig('/home/llj/code/test/output.jpg')
-    # plt.show()
-
-    # 归一化图像
     plt.figure(figsize=(10, 4.5))
     fs = 15
     plt.subplot(2, 5, 1)
@@ -319,49 +263,136 @@ if __name__ == '__main__':
 
     plt.subplot(2, 5, 2)
     plt.tick_params(labelbottom=False, labelleft=False)
-    plt.imshow(scaled_mean)
+    plt.imshow(mean)
     plt.title('mean', fontsize=fs)
 
     plt.subplot(2, 5, 3)
     plt.tick_params(labelbottom=False, labelleft=False)
-    plt.imshow(scaled_std)
+    plt.imshow(std)
     plt.title('std', fontsize=fs)
 
     plt.subplot(2, 5, 4)
     plt.tick_params(labelbottom=False, labelleft=False)
-    plt.imshow(scaled_cont)
+    plt.imshow(cont)
     plt.title('contrast', fontsize=fs)
 
     plt.subplot(2, 5, 5)
     plt.tick_params(labelbottom=False, labelleft=False)
-    plt.imshow(scaled_diss)
+    plt.imshow(diss)
     plt.title('dissimilarity', fontsize=fs)
 
     plt.subplot(2, 5, 6)
     plt.tick_params(labelbottom=False, labelleft=False)
-    plt.imshow(scaled_homo)
+    plt.imshow(homo)
     plt.title('homogeneity', fontsize=fs)
 
     plt.subplot(2, 5, 7)
     plt.tick_params(labelbottom=False, labelleft=False)
-    plt.imshow(scaled_asm)
+    plt.imshow(asm)
     plt.title('ASM', fontsize=fs)
 
     plt.subplot(2, 5, 8)
     plt.tick_params(labelbottom=False, labelleft=False)
-    plt.imshow(scaled_ene)
+    plt.imshow(ene)
     plt.title('energy', fontsize=fs)
 
     plt.subplot(2, 5, 9)
     plt.tick_params(labelbottom=False, labelleft=False)
-    plt.imshow(scaled_ma)
+    plt.imshow(ma)
     plt.title('max', fontsize=fs)
 
     plt.subplot(2, 5, 10)
     plt.tick_params(labelbottom=False, labelleft=False)
-    plt.imshow(scaled_ent)
+    plt.imshow(ent)
     plt.title('entropy', fontsize=fs)
 
     plt.tight_layout(pad=0.5)
     plt.savefig('/home/llj/code/test/output.jpg')
     plt.show()
+
+    # # 归一化图像
+    # plt.figure(figsize=(10, 4.5))
+    # fs = 15
+    # plt.subplot(2, 5, 1)
+    # plt.tick_params(labelbottom=False, labelleft=False)
+    # plt.imshow(img)
+    # plt.title('original', fontsize=fs)
+    #
+    # plt.subplot(2, 5, 2)
+    # plt.tick_params(labelbottom=False, labelleft=False)
+    # plt.imshow(scaled_mean)
+    # plt.title('mean', fontsize=fs)
+    #
+    # plt.subplot(2, 5, 3)
+    # plt.tick_params(labelbottom=False, labelleft=False)
+    # plt.imshow(scaled_std)
+    # plt.title('std', fontsize=fs)
+    #
+    # plt.subplot(2, 5, 4)
+    # plt.tick_params(labelbottom=False, labelleft=False)
+    # plt.imshow(scaled_cont)
+    # plt.title('contrast', fontsize=fs)
+    #
+    # plt.subplot(2, 5, 5)
+    # plt.tick_params(labelbottom=False, labelleft=False)
+    # plt.imshow(scaled_diss)
+    # plt.title('dissimilarity', fontsize=fs)
+    #
+    # plt.subplot(2, 5, 6)
+    # plt.tick_params(labelbottom=False, labelleft=False)
+    # plt.imshow(scaled_homo)
+    # plt.title('homogeneity', fontsize=fs)
+    #
+    # plt.subplot(2, 5, 7)
+    # plt.tick_params(labelbottom=False, labelleft=False)
+    # plt.imshow(scaled_asm)
+    # plt.title('ASM', fontsize=fs)
+    #
+    # plt.subplot(2, 5, 8)
+    # plt.tick_params(labelbottom=False, labelleft=False)
+    # plt.imshow(scaled_ene)
+    # plt.title('energy', fontsize=fs)
+    #
+    # plt.subplot(2, 5, 9)
+    # plt.tick_params(labelbottom=False, labelleft=False)
+    # plt.imshow(scaled_ma)
+    # plt.title('max', fontsize=fs)
+    #
+    # plt.subplot(2, 5, 10)
+    # plt.tick_params(labelbottom=False, labelleft=False)
+    # plt.imshow(scaled_ent)
+    # plt.title('entropy', fontsize=fs)
+    #
+    # plt.tight_layout(pad=0.5)
+    # plt.savefig('/home/llj/code/test/output.jpg')
+    # plt.show()
+
+    # src = cv2.imread('/home/llj/code/test/data2/20230625/131600_ch01.jpg')
+    # image_array = Group_RBimg(src)
+    # img = np.array(Image.fromarray(image_array).resize((160, 120)).convert('L'))
+    # asm1 = fast_glcm_ASM(img)
+    # src2 = cv2.imread('/home/llj/code/test/data/20230611/224554_ch01.jpg')
+    # image_array2 = Group_RBimg(src2)
+    # img2 = np.array(Image.fromarray(image_array2).resize((160, 120)).convert('L'))
+    # asm2 = fast_glcm_ASM(img2)
+    # src3 = cv2.imread('/home/llj/code/test/data/20230610/191907_ch01.jpg')
+    # image_array3 = Group_RBimg(src3)
+    # img3 = np.array(Image.fromarray(image_array3).resize((160, 120)).convert('L'))
+    # asm3 = fast_glcm_ASM(img3)
+    # plt.figure(figsize=(10, 4.5))
+    # fs = 15
+    # plt.subplot(1, 3, 1)
+    # plt.tick_params(labelbottom=False, labelleft=False)
+    # plt.imshow(asm1)
+    # plt.title('ASM', fontsize=fs)
+    # plt.subplot(1, 3, 2)
+    # plt.tick_params(labelbottom=False, labelleft=False)
+    # plt.imshow(asm2)
+    # plt.title('ASM2', fontsize=fs)
+    # plt.subplot(1, 3, 3)
+    # plt.tick_params(labelbottom=False, labelleft=False)
+    # plt.imshow(asm2)
+    # plt.title('ASM3', fontsize=fs)
+    # plt.tight_layout(pad=0.5)
+    # plt.savefig('/home/llj/code/test/output.jpg')
+    # plt.show()

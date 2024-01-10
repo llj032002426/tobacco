@@ -161,7 +161,7 @@ def Group_GB(src):
 
 #R/G
 def GroupShow_RB(src):
-    # 使用2g-r-b分离土壤与背景
+    # 使用r-b分离土壤与背景
     src = cv2.resize(src, None, fx=0.3, fy=0.3)
     cv2.imshow('src', src)
 
@@ -382,6 +382,7 @@ def Group_lab(img_bgr):
     return hist
 
 if __name__ == "__main__":
+    # pass
     # src = cv2.imread('/home/llj/code/test/data2/20230701/061802_ch01.jpg')
     # src = cv2.imread('/home/llj/code/test/data/20230616/123338_ch01.jpg')
     src = cv2.imread('/home/llj/code/test/data/20230615/122456_ch01.jpg')
@@ -393,7 +394,7 @@ if __name__ == "__main__":
     # GroupShow_GB(src)
     # Group_GB(src)
 
-    GroupShow_RB(src)
+    # GroupShow_RB(src)
     # Group_RB(src)
 
     # GroupShow_GR(src)
@@ -401,6 +402,22 @@ if __name__ == "__main__":
 
     # GroupShow_lab()
     # Group_lab(src)
+
+    image_array = Group_RBimg(src)
+    # cv2.imshow('color_img', image_array)
+    # cv2.waitKey()
+    # cv2.destroyAllWindows()
+    hist_0 = cv2.calcHist([image_array], [0], None, [256], [0, 256])
+    hist_1 = cv2.calcHist([image_array], [1], None, [256], [0, 256])
+    hist_2 = cv2.calcHist([image_array], [2], None, [256], [0, 256])
+    # plt.plot(hist_0, label='r', color='red')
+    # plt.plot(hist_1, label='g', color='green')
+    plt.plot(hist_2, label='b', color='blue')
+    plt.show()
+
+    # plt.legend(loc='best')
+    # plt.xlim([0, 256])
+    # plt.show()
 
 
 

@@ -150,7 +150,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
     for i, (inputs, times, filenames) in enumerate(train_loader):
         # inputs = torch.reshape(inputs, (-1, 3, 16, 16))
         inputs = torch.reshape(inputs, (-1, 4, 16, 16))
-        # inputs = torch.reshape(inputs, (-1, 7, 16, 16))‘
+        # inputs = torch.reshape(inputs, (-1, 7, 16, 16))
         inputs = inputs.to(device)
         # print(inputs)
         # print(inputs.shape)
@@ -173,9 +173,10 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         # acc = torch.eq(torch.ceil(time_pd * 100), torch.ceil(times * 100)).float().cpu().mean()
         # acc = torch.eq(torch.ceil(time_pd), torch.ceil(times)).float().cpu().mean()
         # acc = torch.eq(torch.round(time_pd * 100), torch.round(times * 100)).float().cpu().mean()
+        acc = torch.eq(torch.round(time_pd * 144), torch.round(times * 144)).float().cpu().mean()
         # print(acc)
         # print(torch.sub(torch.round(time_pd * 100), torch.round(times * 100)))
-        acc = torch.le(abs(torch.sub(torch.round(time_pd * 144), torch.round(times * 144))), 3).float().cpu().mean()
+        # acc = torch.le(abs(torch.sub(torch.round(time_pd * 144), torch.round(times * 144))), 3).float().cpu().mean()
         # acc = torch.le(abs(torch.sub(torch.round(time_pd * 200), torch.round(times * 200))), 6).float().cpu().mean()
         # acc = torch.eq(torch.round(time_pd), torch.round(times)).float().cpu().mean()
         # print(torch.ceil(time_pd))
@@ -231,7 +232,8 @@ def validate(val_loader, model, criterion, epoch, args):
             # acc = torch.eq(torch.ceil(time_pd), torch.ceil(times)).float().cpu().mean()
             # acc = torch.eq(torch.round(time_pd*100), torch.round(times*100)).float().cpu().mean()
             # acc = torch.le(abs(torch.sub(torch.round(time_pd * 100), torch.round(times * 100))), 6).float().cpu().mean()
-            acc = torch.le(abs(torch.sub(torch.round(time_pd * 144), torch.round(times * 144))), 3).float().cpu().mean()
+            # acc = torch.le(abs(torch.sub(torch.round(time_pd * 144), torch.round(times * 144))), 3).float().cpu().mean()
+            acc = torch.eq(torch.round(time_pd * 144), torch.round(times * 144)).float().cpu().mean()
             # acc = torch.eq(torch.round(time_pd), torch.round(times)).float().cpu().mean()
             # acc = acc1(time_pd, times)
             meter.add({"loss": loss.item(), "acc": acc})
@@ -251,7 +253,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="")#创建一个ArgumentParser对象，用于解析命令行参数
     parser.add_argument("--root", type=str, default="/home/llj/code/test/data")#添加一个命令行参数--root，类型为字符串，必需参数
     parser.add_argument("--txt_dir", type=str, default="/home/llj/code/test/")
-    parser.add_argument("--epochs", type=int, default=120)
+    parser.add_argument("--epochs", type=int, default=200)
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--num_workers", type=int, default=4)
     parser.add_argument("--log_step", type=int, default=100)
@@ -281,7 +283,7 @@ if __name__ == '__main__':
         handlers=[logging.FileHandler(log_path, mode='a'), logging.StreamHandler()]
     )
     try:
-        device = torch.device('cuda:2' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
         utils.fix_seed()#调用名为fix_seed()的函数，用于设置随机种子，保证实验的可复现性
         main(args)
     except Exception as e:

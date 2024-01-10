@@ -8,6 +8,7 @@ import random
 import numpy as np
 import scipy.io as sio
 from PIL import Image
+from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import Dataset
 from group_feature import Group_2G_R_B,Group_GB,Group_RB,Group_GR,Group_lab,Group_RBimg
 from textural_feature import fast_glcm_mean,fast_glcm_std,fast_glcm_contrast,fast_glcm_dissimilarity,fast_glcm_homogeneity,fast_glcm_ASM,fast_glcm_ENE,fast_glcm_max,fast_glcm_entropy,all_glcm
@@ -179,10 +180,11 @@ class BatchDataset(Dataset):
         filename, times= self.lines[idx].strip().split(",")
         # image = Image.open(filename).convert('RGB')
         # image = self.transform(image)
-        img = cv2.imread(filename, 1)
+        # img = cv2.imread(filename, 1)
 
         # times = np.float32(int(times)/ 100.0)
-        times = np.float32(int(times)/ 144.0)
+        # times = np.float32(int(times)/ 144.0)
+        times = int(times)
         # times = np.float32(float(times)/100.0)
         # return (image, times, filename)
 
@@ -216,7 +218,7 @@ class BatchDataset(Dataset):
         # hist = torch.cat((hist, hist2), dim=0)
         # print(hist.shape)
 
-        # img = np.array(Image.open(filename).resize((160, 120)).convert('L'))
+        img = np.array(Image.open(filename).resize((160, 120)).convert('L'))
         src = cv2.imread(filename)
         image_array = Group_RBimg(src)
         hist_0 = cv2.calcHist([image_array], [0], None, [256], [0, 256])
@@ -226,40 +228,84 @@ class BatchDataset(Dataset):
         hist_1 = torch.Tensor(hist_1)
         hist_2 = torch.Tensor(hist_2)
         hist = torch.stack((hist_0, hist_1, hist_2), 0)
-        # # img = np.array(Image.fromarray(image_array).resize((160, 120)).convert('L'))
-        # # texture_feat = fast_glcm_mean(img)
-        # # texture_feat = fast_glcm_std(img)
-        # # texture_feat = fast_glcm_contrast(img)
-        # # texture_feat = fast_glcm_dissimilarity(img)
-        # # texture_feat = fast_glcm_homogeneity(img)
-        # # texture_feat = fast_glcm_ASM(img)
-        # # texture_feat = fast_glcm_ENE(img)
-        # # texture_feat = fast_glcm_max(img)
+        # hist2 = Group_lab(src)
+        # hist = torch.cat((hist, hist2), dim=0)
+        # img = np.array(Image.fromarray(image_array).resize((160, 120)).convert('L'))
+        # texture_feat = fast_glcm_mean(img)
+        # texture_feat = fast_glcm_std(img)
+        # texture_feat = fast_glcm_contrast(img)
+        # texture_feat = fast_glcm_dissimilarity(img)
+        # texture_feat = fast_glcm_homogeneity(img)
+        texture_feat = fast_glcm_ASM(img)
+        # texture_feat = fast_glcm_ENE(img)
+        # texture_feat = fast_glcm_max(img)
         # texture_feat = fast_glcm_entropy(img)
-        # # texture_feat = all_glcm(img)
-        # texture_feat = torch.Tensor(texture_feat)
-        # texture_feat = torch.unsqueeze(texture_feat,0)
-        # texture_feat = torch.unsqueeze(texture_feat, 0)
-        # texture_feat = torch.nn.functional.interpolate(texture_feat, size=(256, 1), mode='bilinear',
-        #                                                           align_corners=False)
-        # texture_feat = torch.squeeze(texture_feat, 0)
-        # hist = torch.cat((hist, texture_feat), dim=0)
-        # print(hist.shape)
+        # texture_feat = all_glcm(img)
+        texture_feat = torch.Tensor(texture_feat)
+        texture_feat = torch.unsqueeze(texture_feat,0)
+        texture_feat = torch.unsqueeze(texture_feat, 0)
+        texture_feat = torch.nn.functional.interpolate(texture_feat, size=(256, 1), mode='bilinear',
+                                                                  align_corners=False)
+        texture_feat = torch.squeeze(texture_feat, 0)
+        hist = torch.cat((hist, texture_feat), dim=0)
+        # # print(hist.shape)
+        # return (hist, times, filename)
 
-        if times > 120:
-            # 随机噪声 - 可根据需求设置噪声的范围和分布
-            noise = np.random.normal(0, 1)  # 均值为0，标准差为1的正态分布随机数
+        # hist = Group_RB(img)
+        # if times > 120:
+        #     # 创建一个新的样本列表，用于存储扩充后的样本
+        #     augmented_samples = []
+        #
+        #     # 添加原始样本
+        #     # hist = Group_RB(img)
+        #     augmented_samples.append((hist, times, filename))
+        #
+        #     # 进行数据扩充
+        #     for _ in range(5):  # 假设需要扩充5倍
+        #         # 随机噪声 - 可根据需求设置噪声的范围和分布
+        #         noise = np.random.normal(0, 1)  # 均值为0，标准差为1的正态分布随机数
+        #
+        #         # 偏移 - 可根据需求设置偏移的范围和方式
+        #         offset = np.random.uniform(-10, 10)  # 从-10到10之间均匀采样的随机数
+        #
+        #         # 缩放 - 可根据需求设置缩放的范围和方式
+        #         scale = np.random.uniform(0.8, 1.2)  # 从0.8到1.2之间均匀采样的随机数
+        #
+        #         # 创建扩充后的样本
+        #         augmented_times = times + offset  # 添加偏移
+        #         augmented_times = augmented_times * scale  # 缩放目标值
+        #         augmented_times = augmented_times + noise  # 添加噪声
+        #         augmented_times = np.float32(augmented_times / 144.0)
+        #         augmented_samples.append((hist, augmented_times, filename))
+        #     # # 对样本序列进行填充
+        #     # augmented_samples_pad = []
+        #     # for sample in augmented_samples:
+        #     #     hist, times, filename = sample
+        #     #     hist = hist.numpy()
+        #     #     hist_pad = pad_sequence([torch.from_numpy(hist)], batch_first=True) # 进行填充
+        #     #     augmented_samples_pad.append((hist_pad, times, filename))
+        #
+        #     return augmented_samples
+        #
+        # else:
+        #     times = np.float32(times / 144.0)
+        #     return (hist, times, filename)
 
-            # 偏移 - 可根据需求设置偏移的范围和方式
-            offset = np.random.uniform(-10, 10)  # 从-10到10之间均匀采样的随机数
-
-            # 缩放 - 可根据需求设置缩放的范围和方式
-            scale = np.random.uniform(0.8, 1.2)  # 从0.8到1.2之间均匀采样的随机数
-
-            # 对数据进行随机扰动
-            times = times + offset  # 添加偏移
-            times = times * scale  # 缩放目标值
-            times = times + noise  # 添加噪声
+        # if times >= 120:
+        #     # 随机噪声 - 可根据需求设置噪声的范围和分布
+        #     noise = np.random.normal(0, 1)  # 均值为0，标准差为1的正态分布随机数
+        #
+        #     # 偏移 - 可根据需求设置偏移的范围和方式
+        #     offset = np.random.uniform(-10, 10)  # 从-10到10之间均匀采样的随机数
+        #
+        #     # 缩放 - 可根据需求设置缩放的范围和方式
+        #     scale = np.random.uniform(0.8, 1.2)  # 从0.8到1.2之间均匀采样的随机数
+        #
+        #     # 对数据进行随机扰动
+        #     times = times + offset  # 添加偏移
+        #     times = times * scale  # 缩放目标值
+        #     times = times + noise  # 添加噪声
+        times = np.float32(times / 144.0)
         return (hist, times, filename)
 
 
@@ -275,20 +321,20 @@ def normalization(path):
 
 
 if __name__ == "__main__":
-    pass
-    generate_all_txt(root="/home/llj/code/test/data", txt_dir="/home/llj/code/test/")
-    # split_train_test("/home/llj/code/test/")
+    # pass
+    # generate_all_txt(root="/home/llj/code/test/data", txt_dir="/home/llj/code/test/")
+    # # split_train_test("/home/llj/code/test/")
+    #
+    # generate_all_txt2(root="/home/llj/code/test/data2", txt_dir="/home/llj/code/test/")
+    # # split_train_test2("/home/llj/code/test/")
+    #
+    # split_data("/home/llj/code/test/")
+    # split_data2("/home/llj/code/test/")
 
-    generate_all_txt2(root="/home/llj/code/test/data2", txt_dir="/home/llj/code/test/")
-    # split_train_test2("/home/llj/code/test/")
-
-    split_data("/home/llj/code/test/")
-    split_data2("/home/llj/code/test/")
-
-    with open(os.path.join("/home/llj/code/test/", "all2.txt"), "r", encoding="utf-8") as f:
+    with open(os.path.join("/home/llj/code/test/", "train.txt"), "r", encoding="utf-8") as f:
         data = f.readlines()
     random.shuffle(data)
-    with open(os.path.join("/home/llj/code/test/", "all2.txt"), "w", encoding="utf-8") as f:
+    with open(os.path.join("/home/llj/code/test/", "train.txt"), "w", encoding="utf-8") as f:
         lines = f.writelines(data)
 
     # transform1 = transforms.Compose([

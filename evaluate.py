@@ -118,7 +118,7 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--num_workers", type=int, default=4)
     parser.add_argument("--img_size", type=int, default=224)
-    parser.add_argument("--weights", type=str, default="./middle/models/llj-20231222-112138-best.pth", help="pretrain weight path")
+    parser.add_argument("--weights", type=str, default="./middle/models/llj-20240102-114248-best.pth", help="pretrain weight path")
     parser.add_argument("--experiment_name", type=str, default="llj",help="experiment name")
     # parser.add_argument("--mode", type=str, required=True, choices=["eval", "metrics"])
     parser.add_argument("--mode", type=str, default="eval")
@@ -127,7 +127,7 @@ if __name__ == '__main__':
     result_save_path = "./middle/result/{}.csv".format(args.experiment_name)
 
     os.makedirs("./middle/result/", exist_ok=True)
-    device = torch.device('cuda:2' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     utils.fix_seed()
     if args.mode == "eval":
         assert os.path.exists(args.root), f"Dataset path '{args.root}' NOT exists."

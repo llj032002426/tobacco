@@ -261,6 +261,48 @@ class RestNet18(nn.Module):
         return out
 
 #Resnet50
+# class SELayer(nn.Module):
+#     def __init__(self, channel=64, reduction=16):
+#         super(SELayer, self).__init__()
+#         self.avg_pool = nn.AdaptiveAvgPool2d(1)
+#         self.fc = nn.Sequential(
+#             nn.Linear(channel, channel // reduction, bias=False),
+#             nn.ReLU(inplace=True),
+#             nn.Linear(channel // reduction, channel, bias=False),
+#             nn.Sigmoid()
+#         )
+#
+#     def forward(self, x):
+#         b, c, _, _ = x.size()
+#         y = self.avg_pool(x).view(b, c)
+#         y = self.fc(y).view(b, c, 1, 1)
+#         return x * y.expand_as(x)
+
+# class SelfAttention(nn.Module):
+#     def __init__(self, in_channels, ratio=8):
+#         super(SelfAttention, self).__init__()
+#         self.query_conv = nn.Conv2d(in_channels, in_channels // ratio, kernel_size=1)
+#         self.key_conv = nn.Conv2d(in_channels, in_channels // ratio, kernel_size=1)
+#         self.value_conv = nn.Conv2d(in_channels, in_channels, kernel_size=1)
+#         self.gamma = nn.Parameter(torch.zeros(1))
+#
+#     def forward(self, x):
+#         batch_size, channels, width, height = x.size()
+#         # print(batch_size, channels, width, height)
+#         proj_query = self.query_conv(x).view(batch_size, -1, width * height)#[16, 32, 256]
+#         proj_key = self.key_conv(x).view(batch_size, -1, width * height).permute(0, 2, 1)#[16, 256, 32]
+#         energy = torch.bmm(proj_query, proj_key)#[16, 32, 32]
+#         attention = F.softmax(energy, dim=-1)#[16, 32, 32]
+#         attention = attention.unsqueeze(2)
+#         print(attention.shape)
+#         proj_value = self.value_conv(x).view(batch_size, -1, width * height)#[16, 256, 256]
+#
+#         out = torch.bmm(attention, proj_value)
+#         print(out.shape)
+#         out = out.view(batch_size, channels, width, height)
+#
+#         out = self.gamma * out + x
+#         return out
 class Bottleneck(nn.Module):
     def __init__(self, inchannel, outchannel, stride=1):
         super(Bottleneck, self).__init__()
@@ -287,7 +329,6 @@ class Bottleneck(nn.Module):
         out += self.shortcut(x)
         out = F.relu(out)
         return out
-
 class ResNet_50(nn.Module):
     def __init__(self):
         super(ResNet_50, self).__init__()
@@ -301,7 +342,11 @@ class ResNet_50(nn.Module):
         self.layer2 = self.make_layer(Bottleneck, 512, 4, stride=2)
         self.layer3 = self.make_layer(Bottleneck, 1024, 6, stride=2)
         self.layer4 = self.make_layer(Bottleneck, 2048, 3, stride=2)
-        self.fc = nn.Linear(512 * 2, 1)
+        self.fc = nn.Linear(512, 1)
+        # self.se = SELayer()
+        # self.attention1 = SelfAttention(256)
+        # self.attention2 = SelfAttention(256)
+
         # **************************
 
     def make_layer(self, block, channels, num_blocks, stride):
@@ -312,18 +357,32 @@ class ResNet_50(nn.Module):
             self.inchannel = channels
         return nn.Sequential(*layers)
 
-    def forward(self, x):  # 3*32*32
-        out = self.conv1(x)  # 64*32*32
-        out = self.layer1(out)  # 64*32*32
-        out = self.layer2(out)  # 128*16*16
-        out = self.layer3(out)  # 256*8*8
-        # out = self.layer4(out)  # 512*4*4
-        out = F.avg_pool2d(out, 4)  # 512*1*1
-        # print(out.size())
-        out = out.view(out.size(0), -1)  # 512
-        out = self.fc(out)
-        out = out.flatten(0)
+    def forward(self, x):
+        out = self.conv1(x)  # [16, 64, 16, 16]
+        # out = self.se(out)
+        # print(out.shape)
+        out = self.layer1(out)#[16, 256, 16, 16]
+        # 添加自注意力机制
+        # out = self.attention1(out)
+        out = self.layer2(out)#[16, 512, 8, 8]
+        # 添加自注意力机制
+        # out = self.attention2(out)
+        # out = self.layer3(out)#[16, 1024, 4, 4]
+        # out = self.layer4(out)#[16, 2048, 2, 2]
+        out = F.avg_pool2d(out, 7)  # layer2 [16, 1024, 1, 1]
+        # out = F.avg_pool2d(out, 4)#layer3 [16, 1024, 1, 1]
+        # out = F.avg_pool2d(out, 2)# layer4 [16, 2048, 1, 1]
+        # print(out.shape)
+        out = out.view(out.size(0), -1)#[16, 2048]
+        out = self.fc(out)#[16,1]
+        out = out.flatten(0)#[16]
         return out
+
+
+
+
+
+
 
 
 # MobileNetV3

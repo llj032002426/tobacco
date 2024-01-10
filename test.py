@@ -1,46 +1,31 @@
-# import torch
-# print(torch.__version__)
-# print(torch.version.cuda)
-# print(torch.backends.cudnn.version())
-# print("gpu",torch.cuda.is_available())
-# import sys
-# print(sys.version)
-
-# -*- "coding: utf-8" -*-
-import sys
-import os
-import time
-import logging
-import traceback
-import argparse
-from datetime import datetime
-
+from models import ResNet_50
 import torch
 import torch.nn as nn
-import torch.optim
-import torch.utils.data
-import torchvision
-import torchvision.transforms as transforms
+class SELayer(nn.Module):
+    def __init__(self, channel=64, reduction=16):
+        super(SELayer, self).__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.fc = nn.Sequential(
+            nn.Linear(channel, channel // reduction, bias=False),
+            nn.ReLU(inplace=True),
+            nn.Linear(channel // reduction, channel, bias=False),
+            nn.Sigmoid()
+        )
 
-import numpy as np
+    def forward(self, x):
+        b, c, _, _ = x.size()
+        y = self.avg_pool(x).view(b, c)
+        y = self.fc(y).view(b, c, 1, 1)
+        return x * y.expand_as(x)
 
-from main import BatchDataset
-from models import ResNet_50
-import utils
-model = ResNet_50()
-def init_weights(m):
-    if type(m) == nn.Linear:
-        nn.init.normal_(m.weight, std=0.01)
+if __name__ == "__main__":
+    # inputs = torch.randn(16, 64, 16, 16)
+    # model = SELayer()
 
-model.apply(init_weights)
-transform1 = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Resize([224, 224], antialias=True),
-    transforms.RandomPerspective(distortion_scale=0.6, p=1.0),
-    transforms.RandomRotation(degrees=(0, 180)),
-])
-# 创建训练集和验证集的数据集对象，包括图像和标签
-train_dataset = BatchDataset("/home/llj/code/test/data", "/home/llj/code/test/", "1", transform=transform1)
-train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=4, pin_memory=True)
-# print(type(train_dataset))
-print(train_loader)
+    inputs = torch.randn(16, 4, 16, 16)
+    model = ResNet_50()
+
+    a = model(inputs)
+    print(a.shape)
+
+
