@@ -183,8 +183,8 @@ class BatchDataset(Dataset):
         # img = cv2.imread(filename, 1)
 
         # times = np.float32(int(times)/ 100.0)
-        # times = np.float32(int(times)/ 144.0)
-        times = int(times)
+        times = np.float32(int(times) / 144.0)
+
         # times = np.float32(float(times)/100.0)
         # return (image, times, filename)
 
@@ -305,7 +305,6 @@ class BatchDataset(Dataset):
         #     times = times + offset  # 添加偏移
         #     times = times * scale  # 缩放目标值
         #     times = times + noise  # 添加噪声
-        times = np.float32(times / 144.0)
         return (hist, times, filename)
 
 
@@ -325,17 +324,17 @@ if __name__ == "__main__":
     # generate_all_txt(root="/home/llj/code/test/data", txt_dir="/home/llj/code/test/")
     # # split_train_test("/home/llj/code/test/")
     #
-    # generate_all_txt2(root="/home/llj/code/test/data2", txt_dir="/home/llj/code/test/")
+    generate_all_txt2(root="/home/llj/code/test/data2", txt_dir="/home/llj/code/test/")
     # # split_train_test2("/home/llj/code/test/")
     #
     # split_data("/home/llj/code/test/")
-    # split_data2("/home/llj/code/test/")
+    split_data2("/home/llj/code/test/")
 
-    with open(os.path.join("/home/llj/code/test/", "train.txt"), "r", encoding="utf-8") as f:
-        data = f.readlines()
-    random.shuffle(data)
-    with open(os.path.join("/home/llj/code/test/", "train.txt"), "w", encoding="utf-8") as f:
-        lines = f.writelines(data)
+    # with open(os.path.join("/home/llj/code/test/", "train.txt"), "r", encoding="utf-8") as f:
+    #     data = f.readlines()
+    # random.shuffle(data)
+    # with open(os.path.join("/home/llj/code/test/", "train.txt"), "w", encoding="utf-8") as f:
+    #     lines = f.writelines(data)
 
     # transform1 = transforms.Compose([
     #     transforms.ToTensor(),

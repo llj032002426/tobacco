@@ -30,18 +30,34 @@ def cal_eta(start_time, cur, total):
     return str(eta)
 
 
+# def plot_history(loss_list, acc_list, val_loss_list, val_acc_list, save_path):
+#     """
+#     绘制loss和acc曲线图
+#     """
+#     plt.figure(figsize=(10,8))
+#     plt.subplot(211)
+#     plt.plot(loss_list, color="blue", label="loss")
+#     plt.plot(val_loss_list, color="orange", label="val_loss")
+#     plt.legend()
+#     plt.subplot(212)
+#     plt.plot(acc_list, color="blue", label="acc")
+#     plt.plot(val_acc_list, color="orange", label="val_acc")
+#     plt.legend()
+#
+#     plt.savefig(save_path)
+#     plt.close()
 def plot_history(loss_list, acc_list, val_loss_list, val_acc_list, save_path):
     """
     绘制loss和acc曲线图
     """
     plt.figure(figsize=(10,8))
     plt.subplot(211)
-    plt.plot(loss_list, color="blue", label="loss")
-    plt.plot(val_loss_list, color="orange", label="val_loss")
+    plt.plot(loss_list[4:], color="blue", label="loss")  # 从epoch=5开始绘制
+    plt.plot(val_loss_list[4:], color="orange", label="val_loss")  # 从epoch=5开始绘制
     plt.legend()
     plt.subplot(212)
-    plt.plot(acc_list, color="blue", label="acc")
-    plt.plot(val_acc_list, color="orange", label="val_acc")
+    plt.plot(acc_list[4:], color="blue", label="acc")  # 从epoch=5开始绘制
+    plt.plot(val_acc_list[4:], color="orange", label="val_acc")  # 从epoch=5开始绘制
     plt.legend()
 
     plt.savefig(save_path)

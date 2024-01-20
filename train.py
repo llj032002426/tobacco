@@ -22,6 +22,7 @@ from models import RestNet18
 from models import ResNet_50
 from models import MobileNetV3_Small
 from models import MobileNetV3_Large
+from models import SSRNet
 import utils
 # os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
@@ -37,7 +38,8 @@ def main(args):
     # model = Model(4, 1, True)
     # model = Model()
     # model = RestNet18()
-    model = ResNet_50()
+    # model = ResNet_50()
+    model = SSRNet()
     # model = MobileNetV3_Small()
     # model = MobileNetV3_Large()
 
@@ -61,12 +63,15 @@ def main(args):
 
     # 损失函数 优化器 学习率调整器
     # criterion = nn.CrossEntropyLoss(reduction='none').to(device)
-    criterion = nn.MSELoss().to(device)#创建一个用于计算损失的均方误差损失函数对象
+    # criterion = nn.MSELoss().to(device)#创建一个用于计算损失的均方误差损失函数对象
+    criterion = nn.L1Loss().to(device)  # 创建一个用于计算损失的均方误差损失函数对象
     # optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=0.01)
     # 创建一个AdamW优化器对象，用于更新模型参数。这里采用了AdamW算法，设置了学习率(lr)，权重衰减(weight_decay)和动量(betas)等参数
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=0.01, betas=[0.9, 0.999])
+    # optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=0.01, betas=[0.9, 0.999])
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=1e-4)
     # 创建一个学习率调整器对象，用于调整学习率。这里采用了Warmup和Cosine退火的策略，根据训练的步数来调整学习率
-    scheduler = utils.WarmupCosineSchedule(optimizer, warmup_steps=args.warmup_steps, t_total=int(1.1 * args.epochs))
+    # scheduler = utils.WarmupCosineSchedule(optimizer, warmup_steps=args.warmup_steps, t_total=int(1.1 * args.epochs))
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
 
     # 定义数据预处理的操作，包括将图像转换为张量、调整图像大小、应用透视变换和随机旋转等
     transform1 = transforms.Compose([
@@ -166,7 +171,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         # print(time_pd)
         # print(time_pd.shape)
 
-        loss = criterion(time_pd, times)
+        loss = criterion(time_pd*144, times*144)
         # print(loss)
         # loss = cross_entropy(time_pd, times)
         # acc = utils.accuracy(time_pd, times)
@@ -224,7 +229,7 @@ def validate(val_loader, model, criterion, epoch, args):
             # print(time_pd.shape)
             # time_pd = abs(time_pd)
 
-            loss = criterion(time_pd, times)
+            loss = criterion(time_pd*144, times*144)
             # print(loss)
             # acc = utils.accuracy(time_pd, times)
             # acc = torch.eq(time_pd, times).float().mean()
@@ -253,7 +258,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="")#创建一个ArgumentParser对象，用于解析命令行参数
     parser.add_argument("--root", type=str, default="/home/llj/code/test/data")#添加一个命令行参数--root，类型为字符串，必需参数
     parser.add_argument("--txt_dir", type=str, default="/home/llj/code/test/")
-    parser.add_argument("--epochs", type=int, default=200)
+    parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--num_workers", type=int, default=4)
     parser.add_argument("--log_step", type=int, default=100)

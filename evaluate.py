@@ -11,6 +11,7 @@ from models import Model
 import utils
 from models import RestNet18
 from models import ResNet_50
+from models import SSRNet
 # os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 def eval():
@@ -20,7 +21,8 @@ def eval():
     # model = Model(3, 1, True)
     # model = nn.Sequential(nn.Flatten(), nn.Linear(256, 1))
     # model = RestNet18()
-    model = ResNet_50()
+    # model = ResNet_50()
+    model = SSRNet()
     model.to(device)
     def init_weights(m):
         if type(m) == nn.Linear:
@@ -97,7 +99,8 @@ def metrics():
             total += 1
             filename, time_gt,time_pd= line.strip().split(",")
             # loss += (int(time_gt)/100.0 - int(time_pd)/100.0)**2
-            loss += (int(time_gt) - int(time_pd)) ** 2
+            # loss += (int(time_gt) - int(time_pd)) ** 2
+            loss += abs(int(time_gt) - int(time_pd))
             # loss += (float(time_gt) / 100.0 - float(time_pd) / 100.0) ** 2
             if abs(int(time_gt) - int(time_pd)) <=3:
             # if abs(float(time_gt) - float(time_pd))<5:
@@ -118,7 +121,7 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--num_workers", type=int, default=4)
     parser.add_argument("--img_size", type=int, default=224)
-    parser.add_argument("--weights", type=str, default="./middle/models/llj-20240102-114248-best.pth", help="pretrain weight path")
+    parser.add_argument("--weights", type=str, default="./middle/models/llj-20240119-225158-best.pth", help="pretrain weight path")
     parser.add_argument("--experiment_name", type=str, default="llj",help="experiment name")
     # parser.add_argument("--mode", type=str, required=True, choices=["eval", "metrics"])
     parser.add_argument("--mode", type=str, default="eval")
