@@ -119,6 +119,7 @@ def fast_glcm_ASM(img, vmin=0, vmax=255, nbit=8, ks=5):
     '''
     calc glcm asm, energy
     '''
+    img = np.array(img)  # 将PIL图像转换为NumPy数组
     h,w = img.shape
     glcm = fast_glcm(img, vmin, vmax, nbit, ks)
     asm = np.zeros((h,w), dtype=np.float32)
@@ -216,6 +217,8 @@ if __name__ == '__main__':
     # img = '/home/llj/code/test/data/20230616/123338_ch01.jpg'
     src = cv2.imread('/home/llj/code/test/data/20230615/122456_ch01.jpg')
     image_array = Group_RBimg(src)
+    # print(image_array.shape)
+    # print(type(image_array))
     # img = np.array(Image.fromarray(image_array).resize((160,120)).convert('L'))
     img = np.array(Image.fromarray(image_array).convert('L'))
     # print(type(img))
@@ -240,6 +243,8 @@ if __name__ == '__main__':
     ene = fast_glcm_ENE(img)
     ma = fast_glcm_max(img)
     ent = fast_glcm_entropy(img)#熵
+
+    print(asm)
 
     # 归一化0-1
     # scaler = MinMaxScaler()

@@ -1,0 +1,16 @@
+/home/llj/code/test/data/20230616/095830_ch01.jpg,136
+/home/llj/code/test/data/20230610/205404_ch01.jpg,3
+/home/llj/code/test/data/20230612/054117_ch01.jpg,36
+/home/llj/code/test/data/20230612/053617_ch01.jpg,36
+/home/llj/code/test/data/20230613/001210_ch01.jpg,55
+/home/llj/code/test/data/20230615/103950_ch01.jpg,113
+/home/llj/code/test/data/20230612/163651_ch01.jpg,47
+/home/llj/code/test/data/20230615/063938_ch01.jpg,109
+/home/llj/code/test/data/20230613/135733_ch01.jpg,68
+/home/llj/code/test/data/20230614/121841_ch01.jpg,91
+/home/llj/code/test/data/20230611/130025_ch01.jpg,20
+/home/llj/code/test/data/20230611/084401_ch01.jpg,15
+/home/llj/code/test/data/20230614/144849_ch01.jpg,93
+/home/llj/code/test/data/20230611/071434_ch01.jpg,14
+/home/llj/code/test/data/20230612/081625_ch01.jpg,39
+/home/llj/code/test/data/20230610/195901_ch01.jpg,2

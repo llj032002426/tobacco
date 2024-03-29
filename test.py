@@ -6,7 +6,7 @@ import time
 
 
 class SSRNet(nn.Module):
-    def __init__(self, stage_num=[3,3,3], image_size=16,
+    def __init__(self, stage_num=[3,3,3,3], image_size=16,
                  class_range=144, lambda_index=1., lambda_delta=1.):
         super(SSRNet, self).__init__()
         self.image_size = image_size
@@ -15,8 +15,14 @@ class SSRNet(nn.Module):
         self.lambda_delta = lambda_delta
         self.class_range = class_range
 
+        self.stream1_stage4 = nn.Sequential(
+            nn.Conv2d(4, 32, 3, 1, 1), #O = （I - K + 2P）/ S +1 (如16x16的输入，O=(16-3+2)/1+1=16    [16, 32, 16, 16]
+            nn.BatchNorm2d(32),#[16, 32, 16, 16] 归一化输入输出形状相同
+            nn.ReLU(),#[16, 32, 16, 16]，ReLU(x)=max(0,x)，输入输出形状相同
+            nn.AvgPool2d(2, 2) #[16, 32, 8, 8]，nn.AvgPool2d(2,2)和nn.MaxPool2d(2, 2)一样是图像长宽缩小为原来的一半
+        )
         self.stream1_stage3 = nn.Sequential(
-            nn.Conv2d(4, 32, 3, 1, 1),
+            nn.Conv2d(32, 32, 3, 1, 1),
             nn.BatchNorm2d(32),
             nn.ReLU(),
             nn.AvgPool2d(2, 2)
@@ -37,9 +43,14 @@ class SSRNet(nn.Module):
             nn.ReLU(),
             # nn.AvgPool2d(2, 2) # paper has this layer, but official codes don't.
         )
-
-        self.stream2_stage3 = nn.Sequential(
+        self.stream2_stage4 = nn.Sequential(
             nn.Conv2d(4, 16, 3, 1, 1),
+            nn.BatchNorm2d(16),
+            nn.Tanh(),
+            nn.MaxPool2d(2, 2)
+        )
+        self.stream2_stage3 = nn.Sequential(
+            nn.Conv2d(16, 16, 3, 1, 1),
             nn.BatchNorm2d(16),
             nn.Tanh(),
             nn.MaxPool2d(2, 2)
@@ -62,10 +73,21 @@ class SSRNet(nn.Module):
         )
 
         # fusion block
-        self.funsion_block_stream1_stage_3_before_PB = nn.Sequential(
+        self.funsion_block_stream1_stage_4_before_PB = nn.Sequential(
             nn.Conv2d(32, 10, 1, padding=0),
             nn.ReLU(),
             nn.AvgPool2d(8, 8)
+        )
+        self.funsion_block_stream1_stage_4_prediction_block = nn.Sequential(
+            nn.Dropout(0.2, ),
+            nn.Linear(10, self.stage_num[3]),
+            nn.ReLU()
+        )
+        
+        self.funsion_block_stream1_stage_3_before_PB = nn.Sequential(
+            nn.Conv2d(32, 10, 1, padding=0),
+            nn.ReLU(),
+            nn.AvgPool2d(4, 4)
         )
         self.funsion_block_stream1_stage_3_prediction_block = nn.Sequential(
             nn.Dropout(0.2, ),
@@ -76,7 +98,7 @@ class SSRNet(nn.Module):
         self.funsion_block_stream1_stage_2_before_PB = nn.Sequential(
             nn.Conv2d(32, 10, 1, padding=0),
             nn.ReLU(),
-            nn.AvgPool2d(4, 4)
+            nn.AvgPool2d(2, 2)
         )
         self.funsion_block_stream1_stage_2_prediction_block = nn.Sequential(
             nn.Dropout(0.2, ),
@@ -91,15 +113,25 @@ class SSRNet(nn.Module):
         )
         self.funsion_block_stream1_stage_1_prediction_block = nn.Sequential(
             nn.Dropout(0.2, ),
-            nn.Linear(10 * 4, self.stage_num[0]),
+            nn.Linear(10, self.stage_num[0]),
             nn.ReLU()
         )
 
         # stream2
-        self.funsion_block_stream2_stage_3_before_PB = nn.Sequential(
+        self.funsion_block_stream2_stage_4_before_PB = nn.Sequential(
             nn.Conv2d(16, 10, 1, padding=0),
             nn.ReLU(),
             nn.MaxPool2d(8, 8)
+        )
+        self.funsion_block_stream2_stage_4_prediction_block = nn.Sequential(
+            nn.Dropout(0.2, ),
+            nn.Linear(10, self.stage_num[3]),
+            nn.ReLU()
+        )
+        self.funsion_block_stream2_stage_3_before_PB = nn.Sequential(
+            nn.Conv2d(16, 10, 1, padding=0),
+            nn.ReLU(),
+            nn.MaxPool2d(4, 4)
         )
         self.funsion_block_stream2_stage_3_prediction_block = nn.Sequential(
             nn.Dropout(0.2, ),
@@ -110,7 +142,7 @@ class SSRNet(nn.Module):
         self.funsion_block_stream2_stage_2_before_PB = nn.Sequential(
             nn.Conv2d(16, 10, 1, padding=0),
             nn.ReLU(),
-            nn.MaxPool2d(4, 4)
+            nn.MaxPool2d(2, 2)
         )
         self.funsion_block_stream2_stage_2_prediction_block = nn.Sequential(
             nn.Dropout(0.2, ),
@@ -125,10 +157,27 @@ class SSRNet(nn.Module):
         )
         self.funsion_block_stream2_stage_1_prediction_block = nn.Sequential(
             nn.Dropout(0.2, ),
-            nn.Linear(10 * 4, self.stage_num[0]),
+            nn.Linear(10, self.stage_num[0]),
             nn.ReLU()
         )
 
+        self.stage4_FC_after_PB = nn.Sequential(
+            nn.Linear(self.stage_num[0], 2 * self.stage_num[0]),
+            nn.ReLU()
+        )
+        self.stage4_prob = nn.Sequential(
+            nn.Linear(2 * self.stage_num[0], self.stage_num[0]),
+            nn.ReLU()
+        )
+        self.stage4_index_offsets = nn.Sequential(
+            nn.Linear(2 * self.stage_num[0], self.stage_num[0]),
+            nn.Tanh()
+        )
+        self.stage4_delta_k = nn.Sequential(
+            nn.Linear(10, 1),
+            nn.Tanh()
+        )
+        
         self.stage3_FC_after_PB = nn.Sequential(
             nn.Linear(self.stage_num[0], 2 * self.stage_num[0]),
             nn.ReLU()
@@ -176,7 +225,7 @@ class SSRNet(nn.Module):
             nn.Tanh()
         )
         self.stage1_delta_k = nn.Sequential(
-            nn.Linear(10 * 4, 1),
+            nn.Linear(10, 1),
             nn.Tanh()
         )
         self.init_params()
@@ -196,45 +245,54 @@ class SSRNet(nn.Module):
                     init.constant_(m.bias, 0)
 
     def forward(self, image_):#[16, 4, 16, 16]
-        feature_stream1_stage3 = self.stream1_stage3(image_)#[16, 32, 8, 8]
+        feature_stream1_stage4 = self.stream1_stage4(image_)#[16, 32, 8, 8]
+        feature_stream1_stage3 = self.stream1_stage3(feature_stream1_stage4)#[16, 32, 4, 4]
 
-        feature_stream1_stage2 = self.stream1_stage2(feature_stream1_stage3)#[16, 32, 4, 4]
+        feature_stream1_stage2 = self.stream1_stage2(feature_stream1_stage3)#[16, 32, 2, 2]
 
-        feature_stream1_stage1 = self.stream1_stage1(feature_stream1_stage2)#[16, 32, 2, 2]
+        feature_stream1_stage1 = self.stream1_stage1(feature_stream1_stage2)#[16, 32, 1, 1]
+        feature_stream2_stage4 = self.stream2_stage4(image_)#[16, 16, 8, 8]
+        feature_stream2_stage3 = self.stream2_stage3(feature_stream2_stage4)#[16, 16, 4, 4]
 
-        feature_stream2_stage3 = self.stream2_stage3(image_)#[16, 16, 8, 8]
+        feature_stream2_stage2 = self.stream2_stage2(feature_stream2_stage3)#[16, 16, 2, 2]
 
-        feature_stream2_stage2 = self.stream2_stage2(feature_stream2_stage3)#[16, 16, 4, 4]
+        feature_stream2_stage1 = self.stream2_stage1(feature_stream2_stage2)#[16, 16, 1, 1]
 
-        feature_stream2_stage1 = self.stream2_stage1(feature_stream2_stage2)#[16, 16, 2, 2]
-
+        feature_stream1_stage4_before_PB = self.funsion_block_stream1_stage_4_before_PB(feature_stream1_stage4)#[16, 10, 1, 1]
         feature_stream1_stage3_before_PB = self.funsion_block_stream1_stage_3_before_PB(feature_stream1_stage3)#[16, 10, 1, 1]
         feature_stream1_stage2_before_PB = self.funsion_block_stream1_stage_2_before_PB(feature_stream1_stage2)#[16, 10, 1, 1]
-        feature_stream1_stage1_before_PB = self.funsion_block_stream1_stage_1_before_PB(feature_stream1_stage1)#[16, 10, 2, 2]
+        feature_stream1_stage1_before_PB = self.funsion_block_stream1_stage_1_before_PB(feature_stream1_stage1)#[16, 10, 1, 1]
 
+        feature_stream2_stage4_before_PB = self.funsion_block_stream2_stage_4_before_PB(feature_stream2_stage4)#[16, 10, 1, 1]
         feature_stream2_stage3_before_PB = self.funsion_block_stream2_stage_3_before_PB(feature_stream2_stage3)#[16, 10, 1, 1]
         feature_stream2_stage2_before_PB = self.funsion_block_stream2_stage_2_before_PB(feature_stream2_stage2)#[16, 10, 1, 1]
-        feature_stream2_stage1_before_PB = self.funsion_block_stream2_stage_1_before_PB(feature_stream2_stage1)#[16, 10, 2, 2]
+        feature_stream2_stage1_before_PB = self.funsion_block_stream2_stage_1_before_PB(feature_stream2_stage1)#[16, 10, 1, 1]
 
         #△k
+        embedding_stream1_stage4_before_PB = feature_stream1_stage4_before_PB.view(
+            feature_stream1_stage4_before_PB.size(0), -1)#[16, 10]
         embedding_stream1_stage3_before_PB = feature_stream1_stage3_before_PB.view(
             feature_stream1_stage3_before_PB.size(0), -1)#[16, 10]
         embedding_stream1_stage2_before_PB = feature_stream1_stage2_before_PB.view(
             feature_stream1_stage2_before_PB.size(0), -1)#[16, 10]
         embedding_stream1_stage1_before_PB = feature_stream1_stage1_before_PB.view(
-            feature_stream1_stage1_before_PB.size(0), -1)#[16, 40]
+            feature_stream1_stage1_before_PB.size(0), -1)#[16, 10]
+        embedding_stream2_stage4_before_PB = feature_stream2_stage4_before_PB.view(
+            feature_stream2_stage4_before_PB.size(0), -1)#[16, 10]
         embedding_stream2_stage3_before_PB = feature_stream2_stage3_before_PB.view(
             feature_stream2_stage3_before_PB.size(0), -1)#[16, 10]
         embedding_stream2_stage2_before_PB = feature_stream2_stage2_before_PB.view(
             feature_stream2_stage2_before_PB.size(0), -1)#[16, 10]
         embedding_stream2_stage1_before_PB = feature_stream2_stage1_before_PB.view(
-            feature_stream2_stage1_before_PB.size(0), -1)#[16, 40]
+            feature_stream2_stage1_before_PB.size(0), -1)#[16, 10]
         stage1_delta_k = self.stage1_delta_k(
             torch.mul(embedding_stream1_stage1_before_PB, embedding_stream2_stage1_before_PB))#[16, 1]
         stage2_delta_k = self.stage2_delta_k(
             torch.mul(embedding_stream1_stage2_before_PB, embedding_stream2_stage2_before_PB))#[16, 1]
         stage3_delta_k = self.stage3_delta_k(
             torch.mul(embedding_stream1_stage3_before_PB, embedding_stream2_stage3_before_PB))#[16, 1]
+        stage4_delta_k = self.stage4_delta_k(
+            torch.mul(embedding_stream1_stage4_before_PB, embedding_stream2_stage4_before_PB))  # [16, 1]
 
         embedding_stage1_after_PB = torch.mul(
             self.funsion_block_stream1_stage_1_prediction_block(embedding_stream1_stage1_before_PB),
@@ -245,22 +303,30 @@ class SSRNet(nn.Module):
         embedding_stage3_after_PB = torch.mul(
             self.funsion_block_stream1_stage_3_prediction_block(embedding_stream1_stage3_before_PB),
             self.funsion_block_stream2_stage_3_prediction_block(embedding_stream2_stage3_before_PB))#[16, 3]
+        embedding_stage4_after_PB = torch.mul(
+            self.funsion_block_stream1_stage_4_prediction_block(embedding_stream1_stage4_before_PB),
+            self.funsion_block_stream2_stage_4_prediction_block(embedding_stream2_stage4_before_PB))  # [16, 3]
+
         embedding_stage1_after_PB = self.stage1_FC_after_PB(embedding_stage1_after_PB)#[16, 6]
         embedding_stage2_after_PB = self.stage2_FC_after_PB(embedding_stage2_after_PB)#[16, 6]
         embedding_stage3_after_PB = self.stage3_FC_after_PB(embedding_stage3_after_PB)#[16, 6]
+        embedding_stage4_after_PB = self.stage3_FC_after_PB(embedding_stage4_after_PB)#[16, 6]
 
         prob_stage_1 = self.stage1_prob(embedding_stage1_after_PB)  # [16, 3]
-        index_offset_stage1 = self.stage1_index_offsets(embedding_stage1_after_PB)
+        index_offset_stage1 = self.stage1_index_offsets(embedding_stage1_after_PB)# [16, 3]
 
         prob_stage_2 = self.stage2_prob(embedding_stage2_after_PB)
         index_offset_stage2 = self.stage2_index_offsets(embedding_stage2_after_PB)
 
         prob_stage_3 = self.stage3_prob(embedding_stage3_after_PB)
         index_offset_stage3 = self.stage3_index_offsets(embedding_stage3_after_PB)
+        prob_stage_4 = self.stage3_prob(embedding_stage4_after_PB)
+        index_offset_stage4 = self.stage4_index_offsets(embedding_stage4_after_PB)
 
         stage1_regress = prob_stage_1[:, 0] * 0  # [16]
         stage2_regress = prob_stage_2[:, 0] * 0
         stage3_regress = prob_stage_3[:, 0] * 0
+        stage4_regress = prob_stage_4[:, 0] * 0
         # k=1
         for index in range(self.stage_num[0]):  # stage1_regress=∑pi·(i+η)
             stage1_regress = stage1_regress + (
@@ -268,7 +334,8 @@ class SSRNet(nn.Module):
         stage1_regress = torch.unsqueeze(stage1_regress, 1)
         stage1_regress = stage1_regress / (self.stage_num[0] * (1 + self.lambda_delta * stage1_delta_k))
         # stage1_regress=∑pi·(i+η) / (∑sk·(1+△k))
-        # k=2, stage1_regress=∑pi·(i+η) / (∑sk·(1+△k))
+
+        # k=2, stage2_regress=∑pi·(i+η) / (∑sk·(1+△k))
         for index in range(self.stage_num[1]):
             stage2_regress = stage2_regress + (
                     index + self.lambda_index * index_offset_stage2[:, index]) * prob_stage_2[:, index]
@@ -282,9 +349,17 @@ class SSRNet(nn.Module):
         stage3_regress = torch.unsqueeze(stage3_regress, 1)
         stage3_regress = stage3_regress / (self.stage_num[0] * (1 + self.lambda_delta * stage1_delta_k) *
                                            (self.stage_num[1] * (1 + self.lambda_delta * stage2_delta_k)) *
-                                           (self.stage_num[2] * (1 + self.lambda_delta * stage3_delta_k))
-                                           )
-        regress_class = (stage1_regress + stage2_regress + stage3_regress) * self.class_range  # y=∑ yk * V
+                                           (self.stage_num[2] * (1 + self.lambda_delta * stage3_delta_k)))
+        
+        for index in range(self.stage_num[3]):
+            stage4_regress = stage4_regress + (
+                    index + self.lambda_index * index_offset_stage4[:, index]) * prob_stage_4[:, index]
+        stage4_regress = torch.unsqueeze(stage4_regress, 1)
+        stage4_regress = stage4_regress / (self.stage_num[0] * (1 + self.lambda_delta * stage1_delta_k) *
+                                           (self.stage_num[1] * (1 + self.lambda_delta * stage2_delta_k)) *
+                                           (self.stage_num[2] * (1 + self.lambda_delta * stage3_delta_k)) *
+                                           (self.stage_num[3] * (1 + self.lambda_delta * stage4_delta_k)))
+        regress_class = (stage1_regress + stage2_regress + stage3_regress + stage4_regress) * self.class_range  # y=∑ yk * V
         regress_class = torch.squeeze(regress_class, 1)
         return regress_class
 

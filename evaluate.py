@@ -12,6 +12,8 @@ import utils
 from models import RestNet18
 from models import ResNet_50
 from models import SSRNet
+from testGLT import GlobalLocalBrainAge
+from test1 import FusionModel
 # os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 def eval():
@@ -22,17 +24,25 @@ def eval():
     # model = nn.Sequential(nn.Flatten(), nn.Linear(256, 1))
     # model = RestNet18()
     # model = ResNet_50()
-    model = SSRNet()
+    # model = SSRNet()
+    model = GlobalLocalBrainAge(4,
+                                patch_size=64,
+                                step=32,
+                                nblock=6,
+                                backbone='vgg8')
+    # model = FusionModel(1)
     model.to(device)
     def init_weights(m):
         if type(m) == nn.Linear:
             nn.init.normal_(m.weight, std=0.01)
 
     model.apply(init_weights)
-    state_dict = torch.load(args.weights, map_location=device)
-    model.load_state_dict(state_dict)
+    # state_dict = torch.load(args.weights, map_location=device)
+    # model.load_state_dict(state_dict)
+    if args.weights != "":
+        state_dict = torch.load(args.weights, map_location=device)
+        model.load_state_dict(state_dict)
     model.eval()
-
 
 
     # 加载数据
@@ -60,6 +70,7 @@ def eval():
             times = times.to(device)
             # print(times)
             time_pd = model(inputs)
+            # time_pd = time_pd[0].flatten(0)
             # time_pd = abs(time_pd)
             # print(time_pd)
 
@@ -121,7 +132,7 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--num_workers", type=int, default=4)
     parser.add_argument("--img_size", type=int, default=224)
-    parser.add_argument("--weights", type=str, default="./middle/models/llj-20240119-225158-best.pth", help="pretrain weight path")
+    parser.add_argument("--weights", type=str, default="./middle/models/llj-20240306-085457-best.pth", help="pretrain weight path")
     parser.add_argument("--experiment_name", type=str, default="llj",help="experiment name")
     # parser.add_argument("--mode", type=str, required=True, choices=["eval", "metrics"])
     parser.add_argument("--mode", type=str, default="eval")

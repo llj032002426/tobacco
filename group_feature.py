@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
+import torchvision.transforms as transforms
 
 #2G-R-B
 def GroupShow_2G_R_B(src):
@@ -404,16 +405,27 @@ if __name__ == "__main__":
     # Group_lab(src)
 
     image_array = Group_RBimg(src)
-    # cv2.imshow('color_img', image_array)
-    # cv2.waitKey()
-    # cv2.destroyAllWindows()
-    hist_0 = cv2.calcHist([image_array], [0], None, [256], [0, 256])
-    hist_1 = cv2.calcHist([image_array], [1], None, [256], [0, 256])
-    hist_2 = cv2.calcHist([image_array], [2], None, [256], [0, 256])
-    # plt.plot(hist_0, label='r', color='red')
-    # plt.plot(hist_1, label='g', color='green')
-    plt.plot(hist_2, label='b', color='blue')
-    plt.show()
+    output_directory = "output.jpg"
+    cv2.imwrite(output_directory, image_array)
+    # # cv2.imshow('color_img', image_array)
+    # # cv2.waitKey()
+    # # cv2.destroyAllWindows()
+    # hist_0 = cv2.calcHist([image_array], [0], None, [256], [0, 256])
+    # hist_1 = cv2.calcHist([image_array], [1], None, [256], [0, 256])
+    # hist_2 = cv2.calcHist([image_array], [2], None, [256], [0, 256])
+    # # plt.plot(hist_0, label='r', color='red')
+    # # plt.plot(hist_1, label='g', color='green')
+    # plt.plot(hist_2, label='b', color='blue')
+    # plt.show()
+
+    # transform = transforms.Compose([
+    #     transforms.ToTensor(),
+    #     transforms.Resize([170, 120], antialias=True),
+    #     transforms.RandomPerspective(distortion_scale=0.6, p=1.0),
+    #     transforms.RandomRotation(degrees=(0, 180)),
+    # ])
+    # image = transform(image_array)
+    # print(image.shape)
 
     # plt.legend(loc='best')
     # plt.xlim([0, 256])
