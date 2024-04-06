@@ -15,7 +15,7 @@ from PIL import Image
 import numpy as np
 
 
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda:2' if torch.cuda.is_available() else 'cpu')
 class convBlock(nn.Module): #每个模块
     def __init__(self, inplace, outplace, kernel_size=3, padding=1):
         super().__init__()
@@ -286,16 +286,41 @@ class feature(nn.Module):
 
         # x = self.vgg(hist1)
         return x
-# 图卷积层
-class GraphConvolution(torch.nn.Module):
-    def __init__(self, in_features, out_features):
-        super(GraphConvolution, self).__init__()
-        self.weight = torch.nn.Parameter(torch.rand(in_features, out_features))
 
-    def forward(self, input, adjacency_matrix):
-        support = torch.mm(input, self.weight)  # 支持度计算
-        output = torch.mm(adjacency_matrix, support)  # 邻接矩阵乘法
-        return output
+import torch.nn.functional as F
+class CNN_FFT(nn.Module):
+    def __init__(self):
+        super(CNN_FFT, self).__init__()
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1)
+        self.fc1 = nn.Linear(128 * 170 * 120, 512)
+        # self.fc2 = nn.Linear(512, num_classes)
+
+    def forward(self, x):
+        # 将输入张量按照通道分割
+        x_real = x[:, :, :, :, 0]  # 实部 [16, 3, 170, 120]
+        x_imag = x[:, :, :, :, 1]  # 虚部
+
+        # 将实部和虚部分别输入到第一个卷积层
+        x_real = F.relu(self.conv1(x_real)) #[16, 64, 170, 120]
+        x_imag = F.relu(self.conv1(x_imag))
+
+        # 将实部和虚部分别输入到第二个卷积层
+        x_real = F.relu(self.conv2(x_real))#[16, 128, 170, 120]
+        x_imag = F.relu(self.conv2(x_imag))
+
+        # 将两个通道的输出合并成一个张量
+        x_real_imag = torch.stack((x_real, x_imag), dim=-1) #[16, 128, 170, 120, 2]
+
+        # 将合并后的张量展平
+        x = x_real_imag.view(-1, 128 * 170 * 120 * 2)
+        print(x.shape)
+
+        # 全连接层
+        x = F.relu(self.fc1(x))
+        # x = self.fc2(x)
+
+        return x
 class GlobalLocalBrainAge(nn.Module):
     def __init__(self, inplace,
                  patch_size=64,
@@ -326,8 +351,7 @@ class GlobalLocalBrainAge(nn.Module):
 
         hidden_size = 512
         self.global_feat = VGG8(inplace)  # 基准模型VGG8，把图像输入转化为深层特征
-        # self.local_feat = VGG8(inplace)
-        self.local_feat = nn.Conv2d(3, 64, patch_size, stride=1, padding=0)
+        self.local_feat = VGG8(inplace)
 
         # self.global_feat = VGG16(inplace)
         # self.local_feat = VGG16(inplace)
@@ -363,64 +387,66 @@ class GlobalLocalBrainAge(nn.Module):
         self.gloout = nn.Linear(out_hidden_size, 1) #将输入特征的大小调整为1
         self.locout = nn.Linear(out_hidden_size, 1)
 
+        self.cnn_fft = CNN_FFT()
+
     def forward(self, xinput):
         _, _, H, W = xinput.size() #获取了输入张量xinput的大小，并将其分配给变量H和W，这里的"_"表示忽略的返回值
         outlist = []
 
-        xglo = self.global_feat(xinput) #返回全局特征张量xglo
-        # print(xglo)
+        xglo = self.global_feat(xinput) #返回全局特征张量xglo [16, 512, 10, 7]
+
+        # 对输入图像进行傅里叶变换，并提取频率信息
+        # xfft = torch.fft.fft2(xinput)  # 对输入图像进行二维傅里叶变换
+        # xfreq = torch.fft.fftshift(torch.fft.fft2(xinput))  # 将零频率移到频谱中心
+        xfreq = torch.fft.fftshift(xinput)
+        xfreq = self.global_feat(xfreq)
+        # xfreq = torch.stack((xfreq.real, xfreq.imag), -1)
+        # print(xfreq)
+        # print(xfreq.shape)
+        # xfreq_real = xfreq.real
+        # xfreq_imag = xfreq.imag
+        # xfreq_real = self.global_feat(xfreq_real)
+        # xfreq_imag = self.global_feat(xfreq_imag)
+        # xfreq = torch.stack((xfreq.real, xfreq.imag), dim=-1) #[16, 3, 170, 120, 2]
+        # xfreq = self.cnn_fft(xfreq)
+        # print(xfreq_real.shape)
+        # xfreq = (xfreq_real + xfreq_imag)/2
+        # xfreq = torch.cat((xfreq_real, xfreq_imag), dim=1) #[16, 1024, 10, 7]
+        # xglo = xglo + xfreq
+        xglo = (xglo + xfreq)/2
+        # print(xglo.shape)
         xgfeat = torch.flatten(self.avg(xglo), 1)#首先将xglo通过自适应平均池化层self.avg进行池化，然后使用torch.flatten函数将结果展平为一维张量
         # print(xgfeat)
         glo = self.gloout(xgfeat)
         # print(glo)
-
         outlist = [glo]
 
         B2, C2, H2, W2 = xglo.size()
         xglot = xglo.view(B2, C2, H2 * W2)
         xglot = xglot.permute(0, 2, 1)
 
-        local_block_features = []
-        # 提取局部特征并构建图
-        graph = {}  # 用字典表示图，每个局部块作为图的一个节点
-        for y in range(0, H - self.patch_size, self.step):
-            for x in range(0, W - self.patch_size, self.step):
-                locx = xinput[:, :, y:y + self.patch_size, x:x + self.patch_size]
-                xloc = self.local_feat(locx)
-                local_block_features.append(xloc)
-                graph[(y, x)] = xloc  # 将局部特征添加到图中，以坐标(y, x)为键 [16, 64, 1, 1]
+        for y in range(0, H - self.patch_size, self.step): #遍历输入张量xinput的高度方向，并且每次迭代中变量y增加self.step
+            for x in range(0, W - self.patch_size, self.step): #遍历输入张量xinput的宽度方向，并且每次迭代中变量x增加self.step
+                locx = xinput[:, :, y:y + self.patch_size, x:x + self.patch_size] #从输入张量xinput中提取了一个局部区域
+                xloc = self.local_feat(locx) #返回局部特征张量xloc
 
-        local_block_features = torch.stack(local_block_features,dim=0)  # Shape: (num_blocks, batch_size, local_feat_dim) [8, 16, 64, 1, 1]
-        # local_block_features = local_block_features.view(-1, local_block_features.size(-1))
-        local_block_features = local_block_features.permute(1, 0, 2, 3, 4)
-        B, N, C, H, W = local_block_features.size()
-        local_block_features = local_block_features.view(B, N, C * H * W)
-        print(local_block_features.shape)
-        # local_block_features = torch.tensor(local_block_features)
+                for n in range(self.nblock):
+                    B1, C1, H1, W1 = xloc.size()
+                    xloct = xloc.view(B1, C1, H1 * W1)
+                    xloct = xloct.permute(0, 2, 1)
 
-        # 计算图节点之间的关系（这里假设为简单的距离关系）
-        adjacency_matrix = torch.zeros(len(graph), len(graph))  # 初始化邻接矩阵
-        for i, (y1, x1) in enumerate(graph.keys()):
-            for j, (y2, x2) in enumerate(graph.keys()):
-                distance = torch.sqrt(torch.tensor((y2 - y1) ** 2 + (x2 - x1) ** 2))  # 计算距离
-                adjacency_matrix[i, j] = 1.0 / (distance + 1.0)  # 距离越远，关系越弱
-        # 创建图卷积层实例
-        graph_convolution = GraphConvolution(in_features=local_block_features.size(1), out_features=local_block_features.size(1))
-        # 计算局部特征和全局特征的融合
-        # print(local_block_features.shape)
-        xloct = graph_convolution(local_block_features, adjacency_matrix)
-        for n in range(self.nblock):
-            xloc = self.attnlist[n](xloct, xglot) #调用了名为attnlist中第n个位置的GlobalAttention对象，传入全局特征张量xglot和局部特征张量xloct，并返回注意力权重张量attention
-            # tmp = tmp.permute(0, 2, 1)
-            # tmp = tmp.view(B1, C1, H1, W1)
-            # tmp = torch.cat([tmp, xloc], 1)
-            #
-            # tmp = self.fftlist[n](tmp)
-            # xloc = xloc + tmp
-            # xloc = torch.flatten(self.avg(xloc), 1)
+                    tmp = self.attnlist[n](xloct, xglot) #调用了名为attnlist中第n个位置的GlobalAttention对象，传入全局特征张量xglot和局部特征张量xloct，并返回注意力权重张量attention
+                    tmp = tmp.permute(0, 2, 1)
+                    tmp = tmp.view(B1, C1, H1, W1)
+                    tmp = torch.cat([tmp, xloc], 1)
 
-        out = self.locout(xloc)
-        outlist.append(out)
+                    tmp = self.fftlist[n](tmp)
+                    xloc = xloc + tmp
+
+                xloc = torch.flatten(self.avg(xloc), 1)
+
+                out = self.locout(xloc)
+                outlist.append(out)
 
         return outlist
         # return outlist[0].flatten(0)
@@ -444,7 +470,7 @@ if __name__ == '__main__':
     # print(zlist[0])
     # print(zlist[0].flatten(0))
     # print(zlist[1].flatten(0))
-    for z in zlist:
-        print(z)
-        print(z.shape)
+    # for z in zlist:
+    #     print(z)
+    #     print(z.shape)
     # print('number is:', len(zlist))

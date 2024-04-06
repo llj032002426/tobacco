@@ -89,7 +89,7 @@ import os
 import random
 def split_data(txt_dir, train_ratio=0.6, val_ratio=0.2, seed=123):
     """将数据集按照比例分为训练集、验证集和测试集三个"""
-    with open(os.path.join(txt_dir, "all.txt"), "r", encoding="utf-8") as f:
+    with open(os.path.join(txt_dir, "all_rb.txt"), "r", encoding="utf-8") as f:
         lines = f.readlines()
     total = len(lines)
 
@@ -104,13 +104,13 @@ def split_data(txt_dir, train_ratio=0.6, val_ratio=0.2, seed=123):
     val_lines = lines[train_size:train_size + val_size]
     test_lines = lines[-test_size:]
 
-    with open(os.path.join(txt_dir, "train.txt"), "w", encoding="utf-8") as f:
+    with open(os.path.join(txt_dir, "train_rb2.txt"), "w", encoding="utf-8") as f:
         for line in train_lines:
             f.write(line)
-    with open(os.path.join(txt_dir, "val.txt"), "w", encoding="utf-8") as f:
+    with open(os.path.join(txt_dir, "val_rb2.txt"), "w", encoding="utf-8") as f:
         for line in val_lines:
             f.write(line)
-    with open(os.path.join(txt_dir, "test.txt"), "w", encoding="utf-8") as f:
+    with open(os.path.join(txt_dir, "test_rb2.txt"), "w", encoding="utf-8") as f:
         for line in test_lines:
             f.write(line)
 
@@ -162,12 +162,6 @@ def split_train_test2(txt_dir, ratio=0.6, seed=123):
         for line in val_lines:
             f.write(line)
 
-
-def hist_ave_2(src):
-    L=np.unique(src)
-    cdf=(np.histogram(src.flatten(),L.size)[0]/src.size).cumsum()
-    cdf=(cdf*L.max()+0.5)
-    return np.interp(src.flatten(),L,cdf).reshape(src.shape)
 class BatchDataset(Dataset):
 
     def __init__(self, root, txt_dir, name, transform):
@@ -313,7 +307,7 @@ if __name__ == "__main__":
     # generate_all_txt2(root="/home/llj/code/test/data2_rb", txt_dir="/home/llj/code/test/")
     # # split_train_test2("/home/llj/code/test/")
     #
-    # split_data("/home/llj/code/test/")
+    split_data("/home/llj/code/test/")
     # split_data2("/home/llj/code/test/")
 
     # with open(os.path.join("/home/llj/code/test/", "train.txt"), "r", encoding="utf-8") as f:

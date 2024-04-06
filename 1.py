@@ -248,8 +248,25 @@ def metrics():
                 count +=1
     print("loss:{}, acc:{:.6f}".format(loss/total, count/total))  # 此处离线评估的loss会比训练期间的验证集更小 因为保存csv时用round做了四舍五入取整
     # print("loss:{}".format(loss / total))
-metrics()
+# metrics()
 
+import cv2
+import matplotlib.pyplot as plt
+import numpy as np
+img0 = cv2.imread('/home/llj/code/test/data_rb/20230615/122456_ch01.jpg')
+img1 = cv2.resize(img0, dsize=None, fx=0.5, fy=0.5)
+img2 = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
+plt.imshow(img2)
+plt.show()
+# plt.rcParams['font.family'] = 'Arial Unicode MS'
+f = np.fft.fft2(img2)
+fshift = np.fft.fftshift(f)  # 将0频率分量移动到中心
+magnitude_spectrum = 20 * np.log(np.abs(fshift))
+plt.xticks([])  # 除去刻度线
+plt.yticks([])
+# plt.title("频谱图")
+plt.imshow(magnitude_spectrum, cmap='gray')
+plt.show()
 
 
 

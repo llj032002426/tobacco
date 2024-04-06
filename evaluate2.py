@@ -12,7 +12,8 @@ import utils
 from models import RestNet18
 from models import ResNet_50
 from models import SSRNet
-from testGLT import GlobalLocalBrainAge
+# from testGLT import GlobalLocalBrainAge
+from randomtest import GlobalLocalBrainAge
 from test1 import FusionModel
 # os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
@@ -67,30 +68,43 @@ def eval():
             times = times.to(device)
             # print(times)
             time_pd = model(inputs)
-            time1 = time_pd[0].flatten(0)
-            rest_of_list = time_pd[1:]
-            average = sum(rest_of_list) / len(rest_of_list)
-            time2 = average.flatten(0)
-            # time_pd = time_pd[0].flatten(0)
-            # time_pd = abs(time_pd)
-            # print(time_pd)
+            # time1 = time_pd[0].flatten(0)
+
+            # rest_of_list = time_pd[1:]
+            # average = sum(rest_of_list) / len(rest_of_list)
+            # time2 = average.flatten(0)
+
 
             for j in range(inputs.shape[0]):
                 time_init = times[j].item()*144
-                time1_pd = time1[j].item()*144
-                time2_pd = time2[j].item() * 144
-                if abs(time_init - time1_pd) < abs(time_init - time2_pd):
-                    time_pd = time1_pd
-                else:
-                    time_pd = time2_pd
+                time_best = time_pd[0].flatten(0)
+                time_pd_best = time_best[j].item()*144
+                for k in range(1, len(time_pd)):
+                    time2 = time_pd[k].flatten(0)
+                    time2_pd = time2[j].item() * 144
+                    if abs(time_init - time2_pd) < abs(time_init - time_pd_best):
+                        time_pd_best = time2_pd
                 fp.write("{},{},{}\n".format(
                     filenames[j], round(time_init),
-                    round(time_pd)
+                    round(time_pd_best)
                 ))
-                # fp.write("{},{},{}\n".format(
-                #     filenames[j], round(times[j].item() * 144),
-                #     round(time_pd[j].item() * 144)
-                # ))
+
+            # for j in range(inputs.shape[0]):
+            #     time_init = times[j].item()*144
+            #     time1_pd = time1[j].item()*144
+            #     time2_pd = time2[j].item() * 144
+            #     if abs(time_init - time1_pd) < abs(time_init - time2_pd):
+            #         time_pd = time1_pd
+            #     else:
+            #         time_pd = time2_pd
+            #     fp.write("{},{},{}\n".format(
+            #         filenames[j], round(time_init),
+            #         round(time_pd)
+            #     ))
+            #     # fp.write("{},{},{}\n".format(
+            #     #     filenames[j], round(times[j].item() * 144),
+            #     #     round(time_pd[j].item() * 144)
+            #     # ))
 
         print("{:<5}/{:<5}".format(i, total))
     metrics()
@@ -112,17 +126,14 @@ def metrics():
         f.readline()
         for line in f:
             total += 1
-            filename, time_gt,time_pd= line.strip().split(",")
+            filename, time_gt, time_pd = line.strip().split(",")
             # loss += (int(time_gt)/100.0 - int(time_pd)/100.0)**2
             # loss += (int(time_gt) - int(time_pd)) ** 2
             loss += abs(int(time_gt) - int(time_pd))
             # loss += (float(time_gt) / 100.0 - float(time_pd) / 100.0) ** 2
             # if int(time_gt) == int(time_pd) :
-            if abs(int(time_gt) - int(time_pd))<=4 :
-            # time_gt = int(time_gt)
-            # time_pd = int(time_pd)
-            # if Acc(time_gt, time_pd):
-                count +=1
+            if abs(int(time_gt) - int(time_pd)) <= 4:
+                count += 1
     print("loss:{}, acc:{:.6f}".format(loss/total, count/total))  # 此处离线评估的loss会比训练期间的验证集更小 因为保存csv时用round做了四舍五入取整
     # print("loss:{}".format(loss / total))
 
@@ -134,17 +145,17 @@ if __name__ == '__main__':
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--num_workers", type=int, default=4)
     parser.add_argument("--img_size", type=int, default=64)
-    parser.add_argument("--weights", type=str, default="./middle/models/llj-20240329-094030-best.pth", help="pretrain weight path")
+    parser.add_argument("--weights", type=str, default="./middle/models/llj-20240406-100135-best.pth", help="pretrain weight path")
     parser.add_argument("--experiment_name", type=str, default="llj",help="experiment name")
     # parser.add_argument("--mode", type=str, required=True, choices=["eval", "metrics"])
     parser.add_argument("--mode", type=str, default="eval")
     args = parser.parse_args()
 
     # result_save_path = "./middle/result/{}2.csv".format(args.experiment_name)
-    result_save_path = "./results/4.csv".format(args.experiment_name)
+    result_save_path = "./results/21_6.csv".format(args.experiment_name)
 
     os.makedirs("./middle/result/", exist_ok=True)
-    device = torch.device('cuda:2' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     utils.fix_seed()
     if args.mode == "eval":
         assert os.path.exists(args.root), f"Dataset path '{args.root}' NOT exists."

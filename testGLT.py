@@ -15,7 +15,7 @@ from PIL import Image
 import numpy as np
 
 
-device = torch.device('cuda:2' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda:1' if torch.cuda.is_available() else 'cpu')
 class convBlock(nn.Module): #每个模块
     def __init__(self, inplace, outplace, kernel_size=3, padding=1):
         super().__init__()

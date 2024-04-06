@@ -23,7 +23,8 @@ from models import ResNet_50
 from models import MobileNetV3_Small
 from models import MobileNetV3_Large
 from models import SSRNet
-from testGLT import GlobalLocalBrainAge
+# from testGLT import GlobalLocalBrainAge
+from randomtest import GlobalLocalBrainAge
 from test1 import FusionModel
 import utils
 # os.environ['CUDA_VISIBLE_DEVICES'] = '1'
@@ -87,6 +88,7 @@ def main(args):
         transforms.ToTensor(),
         # transforms.Resize([args.img_size, args.img_size], antialias=True),
         transforms.Resize([170, 120], antialias=True),
+        # transforms.Resize([250, 180], antialias=True),
         # transforms.Resize([1000, 720], antialias=True),
         transforms.RandomPerspective(distortion_scale=0.6, p=1.0),
         transforms.RandomRotation(degrees=(0, 180)),
@@ -100,6 +102,7 @@ def main(args):
         transforms.ToTensor(),
         # transforms.Resize([args.img_size, args.img_size], antialias=True),
         transforms.Resize([170, 120], antialias=True),
+        # transforms.Resize([250, 180], antialias=True),
         # transforms.Resize([1000, 720], antialias=True),
     ])
     # 创建训练集和验证集的数据集对象，包括图像和标签
@@ -174,15 +177,28 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
 
         # loss = criterion(time_pd*144, times*144)
         loss1 = criterion(time1 * 144, times * 144)
+
+        # min_loss = float('inf')
+        # for i in range(1, len(time_pd)):
+        #     new_list = time_pd.copy()
+        #     loss = criterion(new_list[i].flatten(0) * 144, times * 144)
+        #     if loss < min_loss:
+        #         min_loss = loss
+        #         time2 = new_list[i].flatten(0)
+        # loss2 = min_loss
+
+        # loss2 = criterion(time2 * 144, times * 144)
+
         min_loss = float('inf')
-        for i in range(1, len(time_pd)):
+        loss2 = 0
+        for j in range(1, len(time_pd)):
             new_list = time_pd.copy()
-            loss = criterion(new_list[i].flatten(0) * 144, times * 144)
+            loss = criterion(new_list[j].flatten(0) * 144, times * 144)
+            loss2 += loss
             if loss < min_loss:
                 min_loss = loss
-                time2 = new_list[i].flatten(0)
-        # loss2 = criterion(time2 * 144, times * 144)
-        loss2 = min_loss
+                time2 = new_list[j].flatten(0)
+
         loss = loss1 + loss2
         # loss = min(loss1,loss2)
 
@@ -255,15 +271,27 @@ def validate(val_loader, model, criterion, epoch, args):
             # loss2 = criterion(time2 * 144, times * 144)
 
             loss1 = criterion(time1 * 144, times * 144)
+
+            # min_loss = float('inf')
+            # for i in range(1, len(time_pd)):
+            #     new_list = time_pd.copy()
+            #     loss = criterion(new_list[i].flatten(0) * 144, times * 144)
+            #     if loss < min_loss:
+            #         min_loss = loss
+            #         time2 = new_list[i].flatten(0)
+            # loss2 = min_loss
+
             min_loss = float('inf')
-            for i in range(1, len(time_pd)):
+            loss2 = 0
+            for j in range(1, len(time_pd)):
                 new_list = time_pd.copy()
-                loss = criterion(new_list[i].flatten(0) * 144, times * 144)
+                loss = criterion(new_list[j].flatten(0) * 144, times * 144)
+                loss2 += loss
                 if loss < min_loss:
                     min_loss = loss
-                    time2 = new_list[i].flatten(0)
+                    time2 = new_list[j].flatten(0)
+
             # loss2 = criterion(time2 * 144, times * 144)
-            loss2 = min_loss
             loss = loss1 + loss2
             # loss = min(loss1, loss2)
             # acc = utils.accuracy(time_pd, times)
@@ -295,7 +323,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="")#创建一个ArgumentParser对象，用于解析命令行参数
     parser.add_argument("--root", type=str, default="/home/llj/code/test/data_rb")#添加一个命令行参数--root，类型为字符串，必需参数
     parser.add_argument("--txt_dir", type=str, default="/home/llj/code/test/")
-    parser.add_argument("--epochs", type=int, default=160)
+    parser.add_argument("--epochs", type=int, default=12)
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--num_workers", type=int, default=4)
     parser.add_argument("--log_step", type=int, default=100)
