@@ -25,7 +25,7 @@ class convBlock(nn.Module): #每个模块
         self.bn1 = nn.BatchNorm2d(outplace)
 
     def forward(self, x):
-        x = x.to(device)
+        # x = x.to(device)
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
@@ -286,6 +286,40 @@ class feature(nn.Module):
 
         # x = self.vgg(hist1)
         return x
+
+import torch.nn.functional as F
+class CNN_FFT(nn.Module):
+    def __init__(self):
+        super(CNN_FFT, self).__init__()
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1)
+        # self.fc1 = nn.Linear(128 * 170 * 120, 512)
+
+    def forward(self, x):
+    #     # 将输入张量按照通道分割
+    #     x_real = x[:, :, :, :, 0]  # 实部 [16, 3, 170, 120]
+    #     x_imag = x[:, :, :, :, 1]  # 虚部
+    #
+    #     # 将实部和虚部分别输入到第一个卷积层
+    #     x_real = F.relu(self.conv1(x_real)) #[16, 64, 170, 120]
+    #     x_imag = F.relu(self.conv1(x_imag))
+    #
+    #     # 将实部和虚部分别输入到第二个卷积层
+    #     x_real = F.relu(self.conv2(x_real))#[16, 128, 170, 120]
+    #     x_imag = F.relu(self.conv2(x_imag))
+    #
+    #     # 将两个通道的输出合并成一个张量
+    #     x_real_imag = torch.stack((x_real, x_imag), dim=-1) #[16, 128, 170, 120, 2]
+    #
+    #     # 将合并后的张量展平
+    #     x = x_real_imag.view(-1, 128 * 170 * 120 * 2)
+    #     print(x.shape)
+    #
+    #     # 全连接层
+    #     x = F.relu(self.fc1(x))
+    #     # x = self.fc2(x)
+    #
+        return x
 class GlobalLocalBrainAge(nn.Module):
     def __init__(self, inplace,
                  patch_size=64,
@@ -352,17 +386,25 @@ class GlobalLocalBrainAge(nn.Module):
         self.gloout = nn.Linear(out_hidden_size, 1) #将输入特征的大小调整为1
         self.locout = nn.Linear(out_hidden_size, 1)
 
+        # self.cnn_fft = CNN_FFT()
+
     def forward(self, xinput):
         _, _, H, W = xinput.size() #获取了输入张量xinput的大小，并将其分配给变量H和W，这里的"_"表示忽略的返回值
         outlist = []
 
-        xglo = self.global_feat(xinput) #返回全局特征张量xglo
-        # print(xglo)
+        xglo = self.global_feat(xinput) #返回全局特征张量xglo [16, 512, 10, 7]
+
+        # 对输入图像进行傅里叶变换，并提取频率信息
+        # xfft = torch.fft.fft2(xinput)  # 对输入图像进行二维傅里叶变换
+        # xfreq = torch.fft.fftshift(torch.fft.fft2(xinput))  # 将零频率移到频谱中心
+        xfreq = torch.fft.fftshift(xinput)
+        xfreq = self.global_feat(xfreq)
+        xglo = (xglo + xfreq)/2
+        # print(xglo.shape)
         xgfeat = torch.flatten(self.avg(xglo), 1)#首先将xglo通过自适应平均池化层self.avg进行池化，然后使用torch.flatten函数将结果展平为一维张量
         # print(xgfeat)
         glo = self.gloout(xgfeat)
         # print(glo)
-
         outlist = [glo]
 
         B2, C2, H2, W2 = xglo.size()
@@ -408,9 +450,7 @@ if __name__ == '__main__':
     #                           backbone='vgg8')
     mod = GlobalLocalBrainAge(3,
                               patch_size=64,
-                              step=32,
-                              nblock=6,
-                              backbone='vgg8')
+                              nblock=6)
     zlist = mod(x1)
     # print(zlist[0].shape)
     # print(zlist[0])

@@ -3,7 +3,7 @@
 import torch
 from torch import nn
 from torch.nn import functional as F
-from d2l import torch as d2l
+# from d2l import torch as d2l
 import torchvision.models as models
 import torchvision.transforms as transforms
 
@@ -219,10 +219,10 @@ class RestNetDownBlock(nn.Module):
         return F.relu(extra_x + out)
 
 
-class RestNet18(nn.Module):
+class ResNet18(nn.Module):
     def __init__(self):
-        super(RestNet18, self).__init__()
-        self.conv1 = nn.Conv2d(4, 64, kernel_size=7, stride=2, padding=3)
+        super(ResNet18, self).__init__()
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3)
         self.bn1 = nn.BatchNorm2d(64)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
@@ -342,7 +342,7 @@ class ResNet_50(nn.Module):
         self.layer2 = self.make_layer(Bottleneck, 512, 4, stride=2)
         self.layer3 = self.make_layer(Bottleneck, 1024, 6, stride=2)
         self.layer4 = self.make_layer(Bottleneck, 2048, 3, stride=2)
-        self.fc = nn.Linear(1024, 1)
+        self.fc = nn.Linear(12288, 1)
         # self.se = SELayer()
         # self.attention1 = SelfAttention(256)
         # self.attention2 = SelfAttention(256)
@@ -368,15 +368,16 @@ class ResNet_50(nn.Module):
         # 添加自注意力机制
         # out = self.attention2(out)
         out = self.layer3(out)#[16, 1024, 4, 4]
-        # out = self.layer4(out)#[16, 2048, 2, 2]
-        # out = F.avg_pool2d(out, 7)  # layer2 [16, 1024, 1, 1]
-        out = F.avg_pool2d(out, 4)#layer3 [16, 1024, 1, 1]
+        out = self.layer4(out)#[16, 2048, 2, 2]
+        out = F.avg_pool2d(out, 7)  # layer2 [16, 1024, 1, 1]
+        # out = F.avg_pool2d(out, 4)#layer3 [16, 1024, 1, 1]
         # out = F.avg_pool2d(out, 2)# layer4 [16, 2048, 1, 1]
         # print(out.shape)
         out = out.view(out.size(0), -1)#[16, 2048]
         out = self.fc(out)#[16,1]
         out = out.flatten(0)#[16]
         return out
+
 
 
 
@@ -394,7 +395,7 @@ class SSRNet(nn.Module):
         self.class_range = class_range
 
         self.stream1_stage4 = nn.Sequential(
-            nn.Conv2d(4, 32, 3, 1, 1),  # O = （I - K + 2P）/ S +1 (如16x16的输入，O=(16-3+2)/1+1=16    [16, 32, 16, 16]
+            nn.Conv2d(3, 32, 3, 1, 1),  # O = （I - K + 2P）/ S +1 (如16x16的输入，O=(16-3+2)/1+1=16    [16, 32, 16, 16]
             nn.BatchNorm2d(32),  # [16, 32, 16, 16] 归一化输入输出形状相同
             nn.ReLU(),  # [16, 32, 16, 16]，ReLU(x)=max(0,x)，输入输出形状相同
             nn.AvgPool2d(2, 2)  # [16, 32, 8, 8]
@@ -422,7 +423,7 @@ class SSRNet(nn.Module):
             # nn.AvgPool2d(2, 2) # paper has this layer, but official codes don't.
         )
         self.stream2_stage4 = nn.Sequential(
-            nn.Conv2d(4, 16, 3, 1, 1),
+            nn.Conv2d(3, 16, 3, 1, 1),
             nn.BatchNorm2d(16),
             nn.Tanh(),
             nn.MaxPool2d(2, 2)
@@ -458,7 +459,7 @@ class SSRNet(nn.Module):
         )
         self.funsion_block_stream1_stage_4_prediction_block = nn.Sequential(
             nn.Dropout(0.2, ),
-            nn.Linear(10, self.stage_num[3]),
+            nn.Linear(700, self.stage_num[3]),
             nn.ReLU()
         )
 
@@ -469,7 +470,7 @@ class SSRNet(nn.Module):
         )
         self.funsion_block_stream1_stage_3_prediction_block = nn.Sequential(
             nn.Dropout(0.2, ),
-            nn.Linear(10, self.stage_num[2]),
+            nn.Linear(700, self.stage_num[2]),
             nn.ReLU()
         )
 
@@ -480,7 +481,7 @@ class SSRNet(nn.Module):
         )
         self.funsion_block_stream1_stage_2_prediction_block = nn.Sequential(
             nn.Dropout(0.2, ),
-            nn.Linear(10, self.stage_num[1]),
+            nn.Linear(700, self.stage_num[1]),
             nn.ReLU()
         )
 
@@ -491,7 +492,7 @@ class SSRNet(nn.Module):
         )
         self.funsion_block_stream1_stage_1_prediction_block = nn.Sequential(
             nn.Dropout(0.2, ),
-            nn.Linear(10, self.stage_num[0]),
+            nn.Linear(700, self.stage_num[0]),
             nn.ReLU()
         )
 
@@ -503,7 +504,7 @@ class SSRNet(nn.Module):
         )
         self.funsion_block_stream2_stage_4_prediction_block = nn.Sequential(
             nn.Dropout(0.2, ),
-            nn.Linear(10, self.stage_num[3]),
+            nn.Linear(700, self.stage_num[3]),
             nn.ReLU()
         )
         self.funsion_block_stream2_stage_3_before_PB = nn.Sequential(
@@ -513,7 +514,7 @@ class SSRNet(nn.Module):
         )
         self.funsion_block_stream2_stage_3_prediction_block = nn.Sequential(
             nn.Dropout(0.2, ),
-            nn.Linear(10, self.stage_num[2]),
+            nn.Linear(700, self.stage_num[2]),
             nn.ReLU()
         )
 
@@ -524,7 +525,7 @@ class SSRNet(nn.Module):
         )
         self.funsion_block_stream2_stage_2_prediction_block = nn.Sequential(
             nn.Dropout(0.2, ),
-            nn.Linear(10, self.stage_num[1]),
+            nn.Linear(700, self.stage_num[1]),
             nn.ReLU()
         )
 
@@ -535,7 +536,7 @@ class SSRNet(nn.Module):
         )
         self.funsion_block_stream2_stage_1_prediction_block = nn.Sequential(
             nn.Dropout(0.2, ),
-            nn.Linear(10, self.stage_num[0]),
+            nn.Linear(700, self.stage_num[0]),
             nn.ReLU()
         )
 
@@ -552,7 +553,7 @@ class SSRNet(nn.Module):
             nn.Tanh()
         )
         self.stage4_delta_k = nn.Sequential(
-            nn.Linear(10, 1),
+            nn.Linear(700, 1),
             nn.Tanh()
         )
 
@@ -569,7 +570,7 @@ class SSRNet(nn.Module):
             nn.Tanh()
         )
         self.stage3_delta_k = nn.Sequential(
-            nn.Linear(10, 1),
+            nn.Linear(700, 1),
             nn.Tanh()
         )
 
@@ -586,7 +587,7 @@ class SSRNet(nn.Module):
             nn.Tanh()
         )
         self.stage2_delta_k = nn.Sequential(
-            nn.Linear(10, 1),
+            nn.Linear(700, 1),
             nn.Tanh()
         )
 
@@ -603,7 +604,7 @@ class SSRNet(nn.Module):
             nn.Tanh()
         )
         self.stage1_delta_k = nn.Sequential(
-            nn.Linear(10, 1),
+            nn.Linear(700, 1),
             nn.Tanh()
         )
         self.init_params()
@@ -945,13 +946,62 @@ class MobileNetV3_Small(nn.Module):
 
 
 
-# def test():
-#     net = MobileNetV3_Small()
-#     x = torch.randn(2,3,224,224)
-#     y = net(x)
-#     print(y.size())
-#
-# test()
+class VGG16(nn.Module):
+    def __init__(self, num_classes=1):
+        super(VGG16, self).__init__()
+        self.features = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(128, 128, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(128, 256, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(256, 256, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(256, 256, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(256, 512, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(512, 512, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(512, 512, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(512, 512, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(512, 512, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(512, 512, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2)
+        )
+        self.avgpool = nn.AdaptiveAvgPool2d((7, 7))
+        self.classifier = nn.Sequential(
+            nn.Linear(512 * 7 * 7, 4096),
+            nn.ReLU(inplace=True),
+            nn.Dropout(),
+            nn.Linear(4096, 4096),
+            nn.ReLU(inplace=True),
+            nn.Dropout(),
+            nn.Linear(4096, 1000),
+            nn.Linear(1000, num_classes),
+        )
+
+    def forward(self, x):
+        x = self.features(x)
+        x = self.avgpool(x)
+        x = torch.flatten(x, 1)
+        x = self.classifier(x)
+        x = x.flatten(0)
+        return x
+
 
 
 

@@ -18,13 +18,14 @@ import numpy as np
 
 from main import BatchDataset
 from models import Model
-from models import RestNet18
+from models import ResNet18
 from models import ResNet_50
 from models import MobileNetV3_Small
 from models import MobileNetV3_Large
 from models import SSRNet
 # from testGLT import GlobalLocalBrainAge
 from randomtest import GlobalLocalBrainAge
+from test_eval import main_eval
 from test1 import FusionModel
 import utils
 # os.environ['CUDA_VISIBLE_DEVICES'] = '1'
@@ -34,6 +35,7 @@ import utils
 #     x_exp = torch.exp(x)
 #     partition = x_exp.sum(1, keepdim=True)
 #     return x_exp / partition
+
 def main(args):
     # 初始化模型
     # model = Model(pretrained=True)
@@ -44,7 +46,7 @@ def main(args):
     # model = ResNet_50()
     # model = SSRNet()
     model = GlobalLocalBrainAge(3,
-                                patch_size=64,
+                                patch_size=96,
                                 nblock=6)
     # model = FusionModel(1)
 
@@ -59,9 +61,17 @@ def main(args):
         if type(m) == nn.Linear:
             nn.init.normal_(m.weight, std=0.01)
 
+    # def init_weights(m):
+    #     if type(m) == nn.Linear:
+    #         nn.init.xavier_normal_(m.weight)
+
+    # def init_weights(m):
+    #     if type(m) == nn.Linear:
+    #         nn.init.kaiming_normal_(m.weight)
+
     model.apply(init_weights)
 
-    with open("/home/llj/code/test/model_summary.txt", "w", encoding="utf-8") as f_summary:
+    with open("/home/ubuntu/llj/tobacco/model_summary.txt", "w", encoding="utf-8") as f_summary:
         print(model, file=f_summary)
 
     # 加载权重
@@ -87,27 +97,29 @@ def main(args):
 
         transforms.ToTensor(),
         # transforms.Resize([args.img_size, args.img_size], antialias=True),
+        # transforms.Resize([120, 160], antialias=True),
+        # transforms.Resize([128, 170], antialias=True),
+        # transforms.Resize([120, 170], antialias=True),
         transforms.Resize([170, 120], antialias=True),
-        # transforms.Resize([250, 180], antialias=True),
-        # transforms.Resize([1000, 720], antialias=True),
         transforms.RandomPerspective(distortion_scale=0.6, p=1.0),
         transforms.RandomRotation(degrees=(0, 180)),
-        # transforms.RandomAffine(0, translate=(0.2, 0.2)),
-        # transforms.RandomHorizontalFlip(),
-        # transforms.RandomVerticalFlip()
+        transforms.RandomAffine(0, translate=(0.2, 0.2)),
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomVerticalFlip()
     ])
     transform2 = transforms.Compose([
         # transforms.ColorJitter(contrast=0.8)
 
         transforms.ToTensor(),
         # transforms.Resize([args.img_size, args.img_size], antialias=True),
+        # transforms.Resize([120, 160], antialias=True),
+        # transforms.Resize([128, 170], antialias=True),
+        # transforms.Resize([120, 170], antialias=True),
         transforms.Resize([170, 120], antialias=True),
-        # transforms.Resize([250, 180], antialias=True),
-        # transforms.Resize([1000, 720], antialias=True),
     ])
     # 创建训练集和验证集的数据集对象，包括图像和标签
-    train_dataset = BatchDataset(args.root, args.txt_dir, "train_rb1", transform=transform1)
-    val_dataset = BatchDataset(args.root, args.txt_dir, "val_rb1", transform=transform2)
+    train_dataset = BatchDataset(args.root, args.txt_dir, "train_hum", transform=transform1)
+    val_dataset = BatchDataset(args.root, args.txt_dir, "val_hum", transform=transform2)
     # 通过数据集对象创建训练集和验证集的数据加载器，用于批量加载数据进行训练和验证
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True,
                                                num_workers=args.num_workers, pin_memory=True)
@@ -121,6 +133,8 @@ def main(args):
     for epoch in range(args.epochs):
         # 在训练和验证阶段，计算损失和准确率(loss和acc)。并将结果记录在meter对象中
         # 训练
+        # if epoch == 96:
+        #     break
         loss, acc = train(train_loader, model, criterion, optimizer, epoch, args)
         if np.isnan(loss):
             print("ERROR! Loss is Nan. Break.")
@@ -143,6 +157,7 @@ def main(args):
             best_val = val_loss
             torch.save(model.state_dict(), model_save_path)
             logging.info("Saved best model.")
+            main_eval()
         scheduler.step()#每个 epoch 结束后，调整学习率(scheduler.step())
     # 最后，绘制整个训练过程中的损失和准确率曲线图，并保存
     utils.plot_history(meter.pop("loss"), meter.pop("acc"), meter.pop("val_loss"), meter.pop("val_acc"),
@@ -169,38 +184,39 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         time_pd = model(inputs)#预测
         # time_pd = time_pd[0].flatten(0)
         time1 = time_pd[0].flatten(0)
-        # # 切片获取除第一个元素以外的所有元素
-        # rest_of_list = time_pd[1:]
-        # # 计算剩余元素的平均值
-        # average = sum(rest_of_list) / len(rest_of_list)
-        # time2 = average.flatten(0)
 
-        # loss = criterion(time_pd*144, times*144)
-        loss1 = criterion(time1 * 144, times * 144)
-
-        # min_loss = float('inf')
-        # for i in range(1, len(time_pd)):
-        #     new_list = time_pd.copy()
-        #     loss = criterion(new_list[i].flatten(0) * 144, times * 144)
-        #     if loss < min_loss:
-        #         min_loss = loss
-        #         time2 = new_list[i].flatten(0)
-        # loss2 = min_loss
-
-        # loss2 = criterion(time2 * 144, times * 144)
-
+        # time1 = time1*24 + 38
+        # times = times * 24 + 38
+        time1 = time1 * 4 + 37
+        times = times * 4 + 37
+        loss1 = criterion(time1, times)
+        # loss1 = criterion(time1 * 144, times * 144)
         min_loss = float('inf')
         loss2 = 0
         for j in range(1, len(time_pd)):
             new_list = time_pd.copy()
-            loss = criterion(new_list[j].flatten(0) * 144, times * 144)
+            # new_list[j] = new_list[j].flatten(0) * 24 + 38
+            new_list[j] = new_list[j].flatten(0) * 4 + 37
+            loss = criterion(new_list[j], times)
+            # loss = criterion(new_list[j].flatten(0) * 144, times * 144)
             loss2 += loss
             if loss < min_loss:
                 min_loss = loss
                 time2 = new_list[j].flatten(0)
-
         loss = loss1 + loss2
-        # loss = min(loss1,loss2)
+
+        # global_weight = 0.2
+        # local_weight = 0.8
+        # # 计算全局损失
+        # loss1 = criterion(time1 * 144, times * 144) * global_weight
+        # # 计算局部损失的加权总和
+        # loss2 = 0
+        # for j in range(1, len(time_pd)):
+        #     new_list = time_pd.copy()
+        #     loss = criterion(new_list[j].flatten(0) * 144, times * 144) * local_weight
+        #     loss2 += loss
+        # # 计算总损失
+        # loss = loss1 + loss2
 
         # loss = cross_entropy(time_pd, times)
         # acc = utils.accuracy(time_pd, times)
@@ -208,9 +224,12 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         # acc = torch.eq(torch.ceil(time_pd), torch.ceil(times)).float().cpu().mean()
         # acc = torch.eq(torch.round(time_pd * 100), torch.round(times * 100)).float().cpu().mean()
         # acc = torch.eq(torch.round(time_pd * 144), torch.round(times * 144)).float().cpu().mean()
-        acc1 = torch.eq(torch.round(time1 * 144), torch.round(times * 144)).float().cpu().mean()
-        acc2 = torch.eq(torch.round(time2 * 144), torch.round(times * 144)).float().cpu().mean()
-        acc = max(acc1, acc2)
+        # acc1 = torch.eq(torch.round(time1 * 144), torch.round(times * 144)).float().cpu().mean()
+        # acc2 = torch.eq(torch.round(time2 * 144), torch.round(times * 144)).float().cpu().mean()
+        # acc = max(acc1, acc2)
+
+        # acc = torch.eq(torch.round(time1 * 144), torch.round(times * 144)).float().cpu().mean()
+
         # print(torch.sub(torch.round(time_pd * 100), torch.round(times * 100)))
         # acc = torch.le(abs(torch.sub(torch.round(time_pd * 144), torch.round(times * 144))), 3).float().cpu().mean()
         # acc = torch.le(abs(torch.sub(torch.round(time_pd * 200), torch.round(times * 200))), 6).float().cpu().mean()
@@ -220,7 +239,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         # print(acc)
         # print(acc.shape)
         # acc = acc1(time_pd, times)
-        # acc=0
+        acc=0
         meter.add({"loss": float(loss.item()), "acc": acc})
         #如果当前batch的索引(i)被参数args.log_step整除，则打印训练进度(logging.info)，包括当前训练的epoch数、总epoch数、当前batch的索引、总batch数、学习率(optimizer.param_groups[0][‘lr’])以及损失和准确率的信息
         # if i % args.log_step == 0:
@@ -270,29 +289,40 @@ def validate(val_loader, model, criterion, epoch, args):
             # loss1 = criterion(time1 * 144, times * 144)
             # loss2 = criterion(time2 * 144, times * 144)
 
-            loss1 = criterion(time1 * 144, times * 144)
-
-            # min_loss = float('inf')
-            # for i in range(1, len(time_pd)):
-            #     new_list = time_pd.copy()
-            #     loss = criterion(new_list[i].flatten(0) * 144, times * 144)
-            #     if loss < min_loss:
-            #         min_loss = loss
-            #         time2 = new_list[i].flatten(0)
-            # loss2 = min_loss
-
+            # time1 = time1 * 24 + 38
+            # times = times * 24 + 38
+            time1 = time1 * 4 + 37
+            times = times * 4 + 37
+            loss1 = criterion(time1, times)
+            # loss1 = criterion(time1 * 144, times * 144)
             min_loss = float('inf')
             loss2 = 0
             for j in range(1, len(time_pd)):
                 new_list = time_pd.copy()
-                loss = criterion(new_list[j].flatten(0) * 144, times * 144)
+                # new_list[j] = new_list[j].flatten(0) * 24 + 38
+                new_list[j] = new_list[j].flatten(0) * 4 + 37
+                loss = criterion(new_list[j], times)
+                # loss = criterion(new_list[j].flatten(0) * 144, times * 144)
                 loss2 += loss
                 if loss < min_loss:
                     min_loss = loss
                     time2 = new_list[j].flatten(0)
-
-            # loss2 = criterion(time2 * 144, times * 144)
             loss = loss1 + loss2
+
+            # global_weight = 0.2
+            # local_weight = 0.8
+            # # 计算全局损失
+            # loss1 = criterion(time1 * 144, times * 144) * global_weight
+            # # 计算局部损失的加权总和
+            # loss2 = 0
+            # for j in range(1, len(time_pd)):
+            #     new_list = time_pd.copy()
+            #     loss = criterion(new_list[j].flatten(0) * 144, times * 144) * local_weight
+            #     loss2 += loss
+            # # 计算总损失
+            # loss = loss1 + loss2
+
+            # loss = loss1 * 0.2 + loss2 * 0.8
             # loss = min(loss1, loss2)
             # acc = utils.accuracy(time_pd, times)
             # acc = torch.eq(time_pd, times).float().mean()
@@ -301,11 +331,15 @@ def validate(val_loader, model, criterion, epoch, args):
             # acc = torch.le(abs(torch.sub(torch.round(time_pd * 100), torch.round(times * 100))), 6).float().cpu().mean()
             # acc = torch.le(abs(torch.sub(torch.round(time_pd * 144), torch.round(times * 144))), 3).float().cpu().mean()
             # acc = torch.eq(torch.round(time_pd * 144), torch.round(times * 144)).float().cpu().mean()
-            acc1 = torch.eq(torch.round(time1 * 144), torch.round(times * 144)).float().cpu().mean()
-            acc2 = torch.eq(torch.round(time2 * 144), torch.round(times * 144)).float().cpu().mean()
-            acc = max(acc1, acc2)
+            # acc1 = torch.eq(torch.round(time1 * 144), torch.round(times * 144)).float().cpu().mean()
+            # acc2 = torch.eq(torch.round(time2 * 144), torch.round(times * 144)).float().cpu().mean()
+            # acc = max(acc1, acc2)
+
+            # acc = torch.eq(torch.round(time1 * 144), torch.round(times * 144)).float().cpu().mean()
+
             # acc = torch.eq(torch.round(time_pd), torch.round(times)).float().cpu().mean()
             # acc = acc1(time_pd, times)
+            acc = 0
             meter.add({"loss": loss.item(), "acc": acc})
 
 
@@ -321,9 +355,9 @@ def validate(val_loader, model, criterion, epoch, args):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="")#创建一个ArgumentParser对象，用于解析命令行参数
-    parser.add_argument("--root", type=str, default="/home/llj/code/test/data_rb")#添加一个命令行参数--root，类型为字符串，必需参数
-    parser.add_argument("--txt_dir", type=str, default="/home/llj/code/test/")
-    parser.add_argument("--epochs", type=int, default=12)
+    parser.add_argument("--root", type=str, default="/home/ubuntu/llj/tobacco/data_rb")#添加一个命令行参数--root，类型为字符串，必需参数
+    parser.add_argument("--txt_dir", type=str, default="/home/ubuntu/llj/tobacco/")
+    parser.add_argument("--epochs", type=int, default=300)
     parser.add_argument("--batch_size", type=int, default=16)
     parser.add_argument("--num_workers", type=int, default=4)
     parser.add_argument("--log_step", type=int, default=100)
@@ -334,8 +368,8 @@ if __name__ == '__main__':
     parser.add_argument("--experiment_name", type=str, default="llj",help="experiment name")
     args = parser.parse_args()#解析命令行参数，并将结果存储在args变量中
     # 根据实验名称和当前时间生成模型保存路径
-    model_save_path = "./middle/models/{}-{}-best.pth".format(args.experiment_name,
-                                                              datetime.now().strftime("%Y%m%d-%H%M%S"))
+    # model_save_path = "./middle/models/{}-{}-best.pth".format(args.experiment_name,datetime.now().strftime("%Y%m%d-%H%M%S"))
+    model_save_path = "./middle/models/temp_ps64_n6-best.pth"
     # 根据实验名称和当前时间生成日志文件路径
     log_path = "./middle/logs/{}-{}.log".format(args.experiment_name, datetime.now().strftime("%Y%m%d-%H%M%S"))
     # 根据实验名称和当前时间生成历史记录保存路径
@@ -353,7 +387,7 @@ if __name__ == '__main__':
         handlers=[logging.FileHandler(log_path, mode='a'), logging.StreamHandler()]
     )
     try:
-        device = torch.device('cuda:2' if torch.cuda.is_available() else 'cpu')
+        device = torch.device('cuda:1' if torch.cuda.is_available() else 'cpu')
         utils.fix_seed()#调用名为fix_seed()的函数，用于设置随机种子，保证实验的可复现性
         main(args)
     except Exception as e:

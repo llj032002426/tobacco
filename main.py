@@ -44,7 +44,7 @@ def generate_all_txt(root, txt_dir, num_samples=None):
 
 def generate_all_txt2(root, txt_dir, num_samples=None):
     """ 筛选符合要求的数据并生成 all.txt 文件 """
-    f = open(os.path.join(txt_dir, "all2_rb.txt"), "w", encoding="utf-8")
+    f = open(os.path.join(txt_dir, "all2_houyi1h_2.txt"), "w", encoding="utf-8")
     all_imgs_path = glob.glob(r'/home/llj/code/test/data2_rb/*/*.jpg')#数据文件夹路径
     for var in all_imgs_path:
         # print(var)
@@ -176,7 +176,10 @@ class BatchDataset(Dataset):
         # image = Group_RBimg(src)
         image = Image.open(filename).convert('RGB')
         image = self.transform(image)
-        times = np.float32(int(times) / 144.0)
+        # times = np.float32(int(times) / 144.0)
+        # times = np.float32(float(times) / 144.0)
+        times = np.float32((float(times) - 38) / 24)
+        # times = np.float32((float(times) - 37) / 4)
         return (image, times, filename)
 
         # times = np.float32(int(times) / 144.0)
@@ -307,7 +310,7 @@ if __name__ == "__main__":
     # generate_all_txt2(root="/home/llj/code/test/data2_rb", txt_dir="/home/llj/code/test/")
     # # split_train_test2("/home/llj/code/test/")
     #
-    split_data("/home/llj/code/test/")
+    # split_data("/home/llj/code/test/")
     # split_data2("/home/llj/code/test/")
 
     # with open(os.path.join("/home/llj/code/test/", "train.txt"), "r", encoding="utf-8") as f:
@@ -330,8 +333,8 @@ if __name__ == "__main__":
     # print(image.shape)
 
     # # 输入数据集文件夹和输出文件夹
-    # input_folder = "data2"
-    # output_folder = "data2_rb"
+    # input_folder = "data"
+    # output_folder = "data_rb"
     #
     # # 处理数据集
     # process_dataset_RB(input_folder, output_folder)
