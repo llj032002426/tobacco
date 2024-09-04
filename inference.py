@@ -69,7 +69,7 @@ if __name__ == "__main__":
     state_dict = torch.load(args.weights, map_location=device)
     model.load_state_dict(state_dict)
     model.eval()
-    with open("./data/wiki/classes.txt", "r", encoding="utf-8") as f:
+    with open("ITransformer/data/wiki/classes.txt", "r", encoding="utf-8") as f:
         names = f.read().strip().split("\n")
     transform = transforms.Compose([
                                 transforms.ToTensor(),

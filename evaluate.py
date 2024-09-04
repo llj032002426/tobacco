@@ -1,171 +1,64 @@
-# -*- "coding: utf-8" -*-
-import torch.nn as nn
-import os
-import argparse
 import torch
 import torch.utils.data
 import torchvision.transforms as transforms
+from PIL import Image
+import os
+import datetime
+import time
 
-from main import BatchDataset
-from models import Model
-import utils
-from models import RestNet18
-from models import ResNet_50
-from models import SSRNet
-# from testGLT import GlobalLocalBrainAge
 from randomtest import GlobalLocalBrainAge
-from test1 import FusionModel
-# os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-
-def eval():
-
-    # 加载模型
-    # model = Model()
-    # model = Model(3, 1, True)
-    # model = nn.Sequential(nn.Flatten(), nn.Linear(256, 1))
-    # model.to(device)
-    # model = RestNet18()
-    # model = ResNet_50()
-    # model = SSRNet()
-    model = GlobalLocalBrainAge(3,
-                                patch_size=64,
-                                nblock=6)
-    # model = FusionModel(1)
-    model.to(device)
-    def init_weights(m):
-        if type(m) == nn.Linear:
-            nn.init.normal_(m.weight, std=0.01)
-
-    model.apply(init_weights)
-    state_dict = torch.load(args.weights, map_location=device)
-    model.load_state_dict(state_dict)
-    model.eval()
-
-
-    # 加载数据
+def eval_single_image(image_path, model, result_save_path):
     transform = transforms.Compose([
-                transforms.ToTensor(),
-                # transforms.Resize([args.img_size, args.img_size], antialias=True),
-                transforms.Resize([170, 120], antialias=True),
-                # transforms.Resize([250, 180], antialias=True),
+        transforms.ToTensor(),
+        transforms.Resize([170, 120], antialias=True),
     ])
-    dataset = BatchDataset(args.root, args.txt_dir, "test_rb2", transform=transform)
-    loader = torch.utils.data.DataLoader(dataset, batch_size=args.batch_size, shuffle=False,
-                                         num_workers=args.num_workers, pin_memory=True)
-
-    # 保存结果
-    fp = open(result_save_path, "w", encoding="utf-8-sig")
-    fp.write("filename,time(gt),time(pd)\n")
+    image = Image.open(image_path)
+    image = transform(image).unsqueeze(0).to(device)
+    file_path, file_name = os.path.split(image_path)
+    # parent_path, parent_name = os.path.split(file_path)
+    # # print(parent_name,file_name)
+    # parent_name = parent_name[:4] + '-' + parent_name[4:6] + '-' + parent_name[6:]
+    # a_s = tuple(time.strptime(parent_name, "%Y-%m-%d"))
+    # d1 = datetime.date(a_s[0], a_s[1], a_s[2])
+    # start = '20230625'
+    # start = start[:4] + '-' + start[4:6] + '-' + start[6:]
+    # s = tuple(time.strptime(start, "%Y-%m-%d"))
+    # d2 = datetime.date(s[0], s[1], s[2])
+    # # times=(d1 - d2).days*24+int(file_name[:2])+round(int(file_name[2:4])/60,3)
+    # times = (d1 - d2).days * 24 + int(file_name[:2]) - 10
     with torch.no_grad():
-        total = len(loader)
-        for i, (inputs, times, filenames) in enumerate(loader):
-            print("{:<5}/{:<5}".format(i, total), end="\r")
-            # inputs = torch.reshape(inputs, (-1, 3, 16, 16))
-            # inputs = torch.reshape(inputs, (-1, 4, 16, 16))
-            # inputs = torch.reshape(inputs, (-1, 6, 16, 16))
-            inputs = inputs.to(device)
-            # print(inputs)
-            times = times.to(device)
-            # print(times)
-            time_pd = model(inputs)
-            # time1 = time_pd[0].flatten(0)
-
-            # rest_of_list = time_pd[1:]
-            # average = sum(rest_of_list) / len(rest_of_list)
-            # time2 = average.flatten(0)
-
-
-            for j in range(inputs.shape[0]):
-                time_init = times[j].item()*144
-                time_best = time_pd[0].flatten(0)
-                time_pd_best = time_best[j].item()*144
-                for k in range(1, len(time_pd)):
-                    time2 = time_pd[k].flatten(0)
-                    time2_pd = time2[j].item() * 144
-                    if abs(time_init - time2_pd) < abs(time_init - time_pd_best):
-                        time_pd_best = time2_pd
-                fp.write("{},{},{}\n".format(
-                    filenames[j], round(time_init),
-                    round(time_pd_best)
-                ))
-
-            # for j in range(inputs.shape[0]):
-            #     time_init = times[j].item()*144
-            #     time1_pd = time1[j].item()*144
-            #     time2_pd = time2[j].item() * 144
-            #     if abs(time_init - time1_pd) < abs(time_init - time2_pd):
-            #         time_pd = time1_pd
-            #     else:
-            #         time_pd = time2_pd
-            #     fp.write("{},{},{}\n".format(
-            #         filenames[j], round(time_init),
-            #         round(time_pd)
-            #     ))
-            #     # fp.write("{},{},{}\n".format(
-            #     #     filenames[j], round(times[j].item() * 144),
-            #     #     round(time_pd[j].item() * 144)
-            #     # ))
-
-        print("{:<5}/{:<5}".format(i, total))
-    metrics()
-
-def Acc(t1,t2):
-    a1 = int(t1 / 24)
-    b1 = t1 % 24
-    a2 = int(t2 / 24)
-    b2 = t2 % 24
-    if a1 == a2 and int(b1 / 6) == int(b2 / 6):
-        return True
-    return False
-
-def metrics():
-    count = 0
-    total = 0
-    loss = 0
-    with open(result_save_path, "r", encoding="utf-8-sig") as f:
-        f.readline()
-        for line in f:
-            total += 1
-            filename, time_gt, time_pd = line.strip().split(",")
-            # loss += (int(time_gt)/100.0 - int(time_pd)/100.0)**2
-            # loss += (int(time_gt) - int(time_pd)) ** 2
-            loss += abs(int(time_gt) - int(time_pd))
-            # loss += (float(time_gt) / 100.0 - float(time_pd) / 100.0) ** 2
-            # if int(time_gt) == int(time_pd) :
-            if abs(int(time_gt) - int(time_pd)) <= 4:
-                count += 1
-    print("loss:{}, acc:{:.6f}".format(loss/total, count/total))  # 此处离线评估的loss会比训练期间的验证集更小 因为保存csv时用round做了四舍五入取整
-    # print("loss:{}".format(loss / total))
-
-if __name__ == '__main__':
-
-    parser = argparse.ArgumentParser(description="")
-    parser.add_argument("--root", type=str, default="/home/llj/code/test/data")
-    parser.add_argument("--txt_dir", type=str, default="/home/llj/code/test/")
-    parser.add_argument("--batch_size", type=int, default=16)
-    parser.add_argument("--num_workers", type=int, default=4)
-    parser.add_argument("--img_size", type=int, default=64)
-    parser.add_argument("--weights", type=str, default="./middle/models/llj-20240406-100135-best.pth", help="pretrain weight path")
-    parser.add_argument("--experiment_name", type=str, default="llj",help="experiment name")
-    # parser.add_argument("--mode", type=str, required=True, choices=["eval", "metrics"])
-    parser.add_argument("--mode", type=str, default="eval")
-    args = parser.parse_args()
-
-    # result_save_path = "./middle/result/{}2.csv".format(args.experiment_name)
-    result_save_path = "./results/21_6_data1.csv".format(args.experiment_name)
-
-    os.makedirs("./middle/result/", exist_ok=True)
-    device = torch.device('cuda:1' if torch.cuda.is_available() else 'cpu')
-    utils.fix_seed()
-    if args.mode == "eval":
-        assert os.path.exists(args.root), f"Dataset path '{args.root}' NOT exists."
-        assert os.path.exists(args.txt_dir), f"*.txt path '{args.txt_dir}' NOT exists."
-        # assert os.path.exists(args.weights), f"Weights path '{args.weights}' NOT exists."
-        # with open(os.path.join(args.txt_dir, "classes.txt"), "r", encoding="utf-8") as f:
-        #     names = f.read().strip().split("\n")
-        eval()
-    elif args.mode == "metrics":
-        assert os.path.exists(result_save_path), f"CSV path '{result_save_path}' NOT exists."
-        metrics()
-    else:
-        print("Invalid mode:{}".format(args.mode))
+        model.eval()
+        time_pd = model(image)
+    with open(result_save_path, "w", encoding="utf-8-sig") as fp:
+        # time_init = times
+        total_time = 0
+        count = 0
+        for k in range(1, len(time_pd)):
+            time2 = time_pd[k].flatten(0)
+            time2_pd = time2.item() * 144
+            total_time += time2_pd
+            count += 1
+        average_time_j = total_time / count
+        # print(time_init,average_time_j)
+        # fp.write("{},{}\n".format(
+        #     round(time_init),
+        #     round(average_time_j)
+        # ))
+        fp.write("{}\n".format(
+            # round(time_init),
+            round(average_time_j)
+        ))
+    average_time_j = round(average_time_j)
+    # loss = abs(time_init - average_time_j)
+    # print("真实值:{},预测值:{}".format(time_init,average_time_j))
+    print("预测值:{}".format(average_time_j))
+    # print("loss:{}".format(loss))
+# image_path = "/home/llj/code/test/data2_rb/20230628/002405_ch01.jpg"
+image_path = "./1.jpg"
+result_save_path = "./result.csv"
+model = GlobalLocalBrainAge(3, patch_size=64, nblock=6)
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+model.to(device)
+state_dict = torch.load("./middle/models/FFT2_ps96_houyi1h_2-best.pth", map_location=device)
+model.load_state_dict(state_dict)
+eval_single_image(image_path, model, result_save_path)
